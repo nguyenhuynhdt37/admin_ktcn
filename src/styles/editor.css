@@ -1,0 +1,319 @@
+/* CKEditor 5 — Đồng bộ Shadcn UI + Tailwind v4 */
+
+/* ── CSS Variables cho theme ── */
+.ck-editor-wrapper {
+  --ck-border-radius: var(--radius);
+  --ck-color-base-border: hsl(var(--border));
+  --ck-color-base-background: hsl(var(--card));
+  --ck-color-text: hsl(var(--foreground));
+  --ck-color-shadow: rgba(0, 0, 0, 0.05);
+
+  --ck-color-toolbar-background: hsl(var(--muted) / 0.4);
+  --ck-color-toolbar-border: hsl(var(--border));
+
+  --ck-color-button-default-hover-background: hsl(var(--accent));
+  --ck-color-button-default-active-background: hsl(var(--accent));
+  --ck-color-button-on-background: hsl(var(--accent));
+  --ck-color-button-on-hover-background: hsl(var(--accent));
+  --ck-color-button-on-active-background: hsl(var(--accent));
+  --ck-color-button-on-color: hsl(var(--accent-foreground));
+
+  --ck-color-list-background: hsl(var(--popover));
+  --ck-color-list-button-hover-background: hsl(var(--accent));
+  --ck-color-list-button-on-background: hsl(var(--accent));
+  --ck-color-list-button-on-text: hsl(var(--accent-foreground));
+
+  --ck-color-panel-background: hsl(var(--popover));
+  --ck-color-panel-border: hsl(var(--border));
+
+  --ck-color-input-background: hsl(var(--background));
+  --ck-color-input-border: hsl(var(--border));
+  --ck-color-input-text: hsl(var(--foreground));
+
+  --ck-color-dropdown-panel-background: hsl(var(--popover));
+  --ck-color-dropdown-panel-border: hsl(var(--border));
+
+  /* Giá trị mặc định — bị ghi đè bởi inline style từ props */
+  --ck-editor-min-height: 200px;
+  --ck-editor-max-height: 500px;
+}
+
+/* ── Layout chính ── */
+.ck-editor-wrapper .ck.ck-editor {
+  position: relative;
+  width: 100%;
+}
+
+/* ── Chống Tailwind v4 preflight reset ── */
+.ck-editor-wrapper .ck.ck-editor__main {
+  display: block !important;
+}
+
+.ck-editor-wrapper svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+.ck-editor-wrapper .ck-toolbar__items {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+
+.ck-editor-wrapper .ck-button {
+  display: inline-flex !important;
+}
+
+/* ── Toolbar ── */
+.ck-editor-wrapper .ck.ck-editor__top .ck-toolbar {
+  border-top-left-radius: var(--radius) !important;
+  border-top-right-radius: var(--radius) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  background-color: var(--ck-color-toolbar-background) !important;
+  padding: 4px 6px !important;
+}
+
+/* ── Vùng soạn thảo: height + maxHeight + cuộn ── */
+.ck-editor-wrapper .ck.ck-editor__main > .ck-editor__editable {
+  display: block !important;
+  border-bottom-left-radius: var(--radius) !important;
+  border-bottom-right-radius: var(--radius) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-top: none !important;
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  min-height: var(--ck-editor-min-height) !important;
+  max-height: var(--ck-editor-max-height) !important;
+  overflow-y: auto !important;
+  padding: 1rem 1.25rem !important;
+}
+
+/* ── Focus ring ── */
+.ck-editor-wrapper .ck.ck-editor__main > .ck-editor__editable.ck-focused {
+  border-color: hsl(var(--ring)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+  outline: none !important;
+}
+
+/* ── Fullscreen mode: editor fill toàn bộ chiều cao ── */
+.ck-editor-fullscreen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.ck-editor-fullscreen .ck-editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ck-editor-fullscreen .ck-editor-wrapper .ck.ck-editor {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
+.ck-editor-fullscreen .ck-editor-wrapper .ck.ck-editor__main {
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.ck-editor-fullscreen .ck-editor-wrapper .ck.ck-editor__main > .ck-editor__editable {
+  flex: 1 !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+/* ── Ảnh trong editor ── */
+.ck-editor-wrapper .ck-content .image {
+  margin: 1rem 0 !important;
+}
+
+.ck-editor-wrapper .ck-content .image img {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: var(--radius) !important;
+}
+
+.ck-editor-wrapper .ck-content .image > figcaption {
+  text-align: center;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+  padding: 0.5rem 0;
+}
+
+/* ── Video / Media Embed trong editor ── */
+.ck-editor-wrapper .ck-content .media {
+  margin: 1rem 0 !important;
+}
+
+.ck-editor-wrapper .ck-media__wrapper {
+  position: relative !important;
+  width: 100% !important;
+  padding-bottom: 56.25% !important; /* 16:9 aspect ratio */
+  height: 0 !important;
+  overflow: hidden !important;
+  border-radius: var(--radius) !important;
+  background: hsl(var(--muted)) !important;
+}
+
+.ck-editor-wrapper .ck-media__wrapper iframe,
+.ck-editor-wrapper .ck-media__wrapper video {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
+/* ── Raw HTML Embed styling ── */
+.ck-editor-wrapper .ck-content .raw-html-embed {
+  margin: 1rem 0;
+  border: 1px dashed hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  background: hsl(var(--muted) / 0.3);
+}
+
+.ck-editor-wrapper .ck-content .raw-html-embed video {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Dark mode overrides ── */
+.dark .ck.ck-balloon-panel {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .ck.ck-input {
+  background-color: hsl(var(--background)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .ck.ck-button {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .ck.ck-button:hover,
+.dark .ck.ck-button.ck-on {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .ck.ck-dropdown__panel {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .ck.ck-list__item .ck-button:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* ── Nội dung hiển thị (Typography) ── */
+.ck-content {
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.ck-content h1,
+.ck-content h2,
+.ck-content h3,
+.ck-content h4 {
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ck-content h1 { font-size: 1.875rem; }
+.ck-content h2 { font-size: 1.5rem; }
+.ck-content h3 { font-size: 1.25rem; }
+.ck-content h4 { font-size: 1.1rem; }
+
+.ck-content p {
+  margin-bottom: 0.75rem;
+}
+
+.ck-content a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.ck-content blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1rem;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+  margin: 1.5rem 0;
+}
+
+.ck-content pre {
+  background-color: hsl(var(--muted) / 0.6);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  font-family: monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.ck-content code {
+  background-color: hsl(var(--muted));
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85em;
+}
+
+.ck-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.ck-content table td,
+.ck-content table th {
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.ck-content table th {
+  background-color: hsl(var(--muted) / 0.5);
+  font-weight: 600;
+}
+
+/* ── Ảnh & Video hiển thị trong ck-content (render ra ngoài) ── */
+.ck-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.ck-content video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 1rem 0;
+}
+
+.ck-content iframe {
+  max-width: 100%;
+  border: none;
+  border-radius: var(--radius);
+  margin: 1rem 0;
+}
