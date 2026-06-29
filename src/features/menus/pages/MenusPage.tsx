@@ -32,6 +32,7 @@ export function MenusPage() {
   // Tự động chọn menu đầu tiên khi load xong danh sách
   useEffect(() => {
     if (menusList && menusList.length > 0 && !selectedMenuId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedMenuId(menusList[0].id)
     }
   }, [menusList, selectedMenuId])
@@ -152,12 +153,15 @@ export function MenusPage() {
           {/* Cột cấu hình chi tiết (Cột bên phải) */}
           <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4">
             {selectedItemId && selectedMenuId ? (
-              <MenuItemConfigPanel
-                menuId={selectedMenuId}
-                itemId={selectedItemId}
-                onClose={() => setSelectedItemId(null)}
-                refetchTree={refetchTree}
-              />
+              <ErrorBoundary>
+                <MenuItemConfigPanel
+                  key={selectedItemId}
+                  menuId={selectedMenuId}
+                  itemId={selectedItemId}
+                  onClose={() => setSelectedItemId(null)}
+                  refetchTree={refetchTree}
+                />
+              </ErrorBoundary>
             ) : (
               <Card className="border-border border-dashed bg-muted/10 shadow-none">
                 <CardContent className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
@@ -175,3 +179,42 @@ export function MenusPage() {
     </div>
   )
 }
+
+import React from 'react'
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 border border-destructive bg-destructive/5 rounded-xl text-left space-y-2">
+          <h4 className="font-bold text-sm text-destructive">Lỗi Khởi Chạy Cấu Hình</h4>
+          <p className="text-xs text-muted-foreground leading-normal">
+            Không thể hiển thị Panel cấu hình mục menu do lỗi ứng dụng:
+          </p>
+          <pre className="text-[10px] bg-slate-900 text-rose-400 p-3 rounded font-mono overflow-auto max-h-40 leading-normal">
+            {this.state.error?.stack || this.state.error?.message}
+          </pre>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+

@@ -11,9 +11,18 @@ import { UserActivityPage } from '@/features/users/pages/UserActivityPage'
 import { AuditLogsPage } from '@/features/audit-logs/pages/AuditLogsPage'
 import { MenusPage } from '@/features/menus/pages/MenusPage'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
+import { PositionsPage } from '@/features/positions/pages/PositionsPage'
+import { DepartmentsPage } from '@/features/departments/pages/DepartmentsPage'
+import { BannersPage } from '@/features/banners/pages/BannersPage'
+import { TeachersPage } from '@/features/teachers/pages/TeachersPage'
+import TeacherCreatePage from '@/features/teachers/pages/TeacherCreatePage'
+import TeacherEditPage from '@/features/teachers/pages/TeacherEditPage'
+import TeacherDetailPage from '@/features/teachers/pages/TeacherDetailPage'
 
 import { ArticlesPage } from '@/features/articles/pages/ArticlesPage'
 import ArticleFormPage from '@/features/articles/pages/ArticleFormPage'
+import ArticleEditPage from '@/features/articles/pages/ArticleEditPage'
+import ArticleDetailPage from '@/features/articles/pages/ArticleDetailPage'
 import { ArticleDraftsPage } from '@/features/articles/pages/ArticleDraftsPage'
 import { Button } from '@/shared/components/ui/button'
 import { Link } from 'react-router'
@@ -64,6 +73,34 @@ export const router = createBrowserRouter([
         element: <CategoriesPage />,
       },
       {
+        path: 'positions',
+        element: <PositionsPage />,
+      },
+      {
+        path: 'departments',
+        element: <DepartmentsPage />,
+      },
+      {
+        path: 'banners',
+        element: <BannersPage />,
+      },
+      {
+        path: 'teachers',
+        element: <TeachersPage />,
+      },
+      {
+        path: 'teachers/create',
+        element: <TeacherCreatePage />,
+      },
+      {
+        path: 'teachers/:id/edit',
+        element: <TeacherEditPage />,
+      },
+      {
+        path: 'teachers/:slug',
+        element: <TeacherDetailPage />,
+      },
+      {
         path: 'articles',
         element: <ArticlesPage />,
       },
@@ -73,7 +110,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'articles/:id/edit',
-        element: <ArticleFormPage />,
+        element: <ArticleEditPage />,
+      },
+      {
+        path: 'articles/:id/preview',
+        element: <ArticleDetailPage />,
       },
       {
         path: 'articles/drafts',

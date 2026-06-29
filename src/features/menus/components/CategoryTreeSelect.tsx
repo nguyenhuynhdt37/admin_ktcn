@@ -1,8 +1,13 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight, ChevronDown, FolderOpen, Check, Search, Loader2 } from 'lucide-react'
-import { Input } from '@/shared/components/ui/input'
+import { ChevronRight, ChevronDown, FolderOpen, Check, Search, Loader2, ChevronsUpDown } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/shared/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { categoryService } from '@/features/categories/services/categoryService'
 import type { CategoryTreeNode } from '@/features/categories/types'
@@ -31,6 +36,19 @@ function filterTree(nodes: CategoryTreeNode[], keyword: string): CategoryTreeNod
     .filter(Boolean) as CategoryTreeNode[]
 }
 
+// Đệ quy tìm tên danh mục đang chọn để hiển thị ra Button trigger
+function findNodeName(nodes: CategoryTreeNode[], id: string | null): string | null {
+  if (!id) return null
+  for (const node of nodes) {
+    if (node.id === id) return node.name
+    if (node.children && node.children.length > 0) {
+      const found = findNodeName(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
 function TreeNode({
   node,
   selectedId,
@@ -55,12 +73,12 @@ function TreeNode({
     <div>
       <div
         className={cn(
-          'flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors',
+          'flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs transition-colors',
           isSelected && 'bg-primary/10 text-primary font-medium',
           (!isActive || disabled) && 'opacity-50 cursor-not-allowed',
           isActive && !isSelected && !disabled && 'hover:bg-muted'
         )}
-        style={{ paddingLeft: `${level * 20 + 8}px` }}
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => {
           if (disabled || !isActive) return
           onSelect(node.id)
@@ -85,15 +103,15 @@ function TreeNode({
           <span className="w-[18px] shrink-0" />
         )}
 
-        <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />
+        <FolderOpen className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
         <span className="flex-1 truncate">{node.name}</span>
 
         {!isActive && (
-          <Badge variant="outline" className="text-[10px] px-1 py-0 text-destructive border-destructive/30">
+          <Badge variant="outline" className="text-[9px] px-1 py-0 text-destructive border-destructive/30">
             {node.status}
           </Badge>
         )}
-        {isSelected && <Check className="w-4 h-4 shrink-0 text-primary" />}
+        {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-primary" />}
       </div>
 
       {expanded &&
@@ -114,6 +132,7 @@ function TreeNode({
 }
 
 export function CategoryTreeSelect({ value, onChange, disabled }: CategoryTreeSelectProps) {
+  const [open, setOpen] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
 
   const {
@@ -125,50 +144,80 @@ export function CategoryTreeSelect({ value, onChange, disabled }: CategoryTreeSe
     queryFn: categoryService.getCategoryTree,
   })
 
-  const filteredTree = filterTree(tree, searchKeyword)
+  const selectedName = useMemo(() => {
+    return findNodeName(tree, value)
+  }, [tree, value])
+
+  const filteredTree = useMemo(() => {
+    return filterTree(tree, searchKeyword)
+  }, [tree, searchKeyword])
+
   const isSearching = searchKeyword.trim().length > 0
 
   return (
-    <div className="space-y-2">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          value={searchKeyword}
-          onChange={(e) => setSearchKeyword(e.target.value)}
-          placeholder="Tìm kiếm danh mục..."
-          className="h-8 pl-8 text-sm"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
           disabled={disabled}
-        />
-      </div>
-
-      {/* Tree */}
-      <div className="max-h-[260px] overflow-y-auto rounded-lg border border-border/60 bg-background p-1.5">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-6">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Đang tải danh mục...</span>
-          </div>
-        ) : isError ? (
-          <p className="py-4 text-center text-xs text-destructive">Không thể tải danh mục.</p>
-        ) : filteredTree.length === 0 ? (
-          <p className="py-4 text-center text-xs text-muted-foreground">
-            {isSearching ? 'Không tìm thấy danh mục phù hợp.' : 'Chưa có danh mục nào.'}
-          </p>
-        ) : (
-          filteredTree.map((node) => (
-            <TreeNode
-              key={node.id}
-              node={node}
-              selectedId={value}
-              onSelect={onChange}
-              level={0}
-              defaultExpanded={isSearching}
+          className="w-full justify-between text-xs h-10 font-normal bg-background px-3 hover:bg-background/80 focus:ring-1 focus:ring-primary/20 cursor-pointer"
+        >
+          <span className="truncate flex-1 text-left font-medium text-slate-700 dark:text-slate-300">
+            {selectedName ? selectedName : 'Chọn danh mục liên kết...'}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-50" align="start">
+        <div className="flex flex-col max-h-[340px] overflow-hidden bg-popover text-popover-foreground rounded-lg border shadow-lg">
+          {/* Hộp Tìm kiếm hợp nhất */}
+          <div className="flex items-center border-b px-3 py-2.5 gap-2 bg-slate-50/50 dark:bg-slate-900/50">
+            <Search className="h-4 w-4 shrink-0 opacity-50 text-muted-foreground" />
+            <input
+              placeholder="Tìm kiếm danh mục..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
               disabled={disabled}
+              className="flex-1 bg-transparent text-xs outline-none border-none py-0.5 placeholder:text-muted-foreground/70"
+              autoFocus
             />
-          ))
-        )}
-      </div>
-    </div>
+          </div>
+
+          {/* Cây danh mục */}
+          <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Đang tải danh mục...</span>
+              </div>
+            ) : isError ? (
+              <p className="py-6 text-center text-xs text-destructive">Không thể tải danh mục.</p>
+            ) : filteredTree.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted-foreground">
+                {isSearching ? 'Không tìm thấy danh mục phù hợp.' : 'Chưa có danh mục nào.'}
+              </p>
+            ) : (
+              filteredTree.map((node) => (
+                <TreeNode
+                  key={node.id}
+                  node={node}
+                  selectedId={value}
+                  onSelect={(id) => {
+                    onChange(id)
+                    setOpen(false)
+                    setSearchKeyword('')
+                  }}
+                  level={0}
+                  defaultExpanded={isSearching}
+                  disabled={disabled}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

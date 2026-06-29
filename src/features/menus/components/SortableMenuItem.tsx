@@ -10,6 +10,7 @@ import {
   Globe,
   EyeOff,
   Plus,
+  Award,
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
@@ -22,7 +23,7 @@ interface SortableMenuItemProps {
   id: string
   title: string
   depth: number
-  targetType: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | null
+  targetType: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | 'DEPARTMENT' | null
   targetInfo: TargetInfo | null
   externalUrl: string | null
   isVisible: boolean
@@ -47,6 +48,7 @@ function toPascalCase(str: string): string {
 function LucideIcon({ name, size = 16, className }: { name: string; size?: number; className?: string }) {
   if (!name) return null
   const pascalName = toPascalCase(name)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const IconComponent = (LucideIcons as any)[pascalName]
   if (!IconComponent) return null
   return <IconComponent size={size} className={className} />
@@ -102,6 +104,8 @@ export function SortableMenuItem({
         return <FileText className="h-4 w-4 text-indigo-500" />
       case 'EXTERNAL_LINK':
         return <Globe className="h-4 w-4 text-amber-500" />
+      case 'DEPARTMENT':
+        return <Award className="h-4 w-4 text-purple-500" />
       default:
         return <Folder className="h-4 w-4 text-muted-foreground" />
     }
@@ -118,6 +122,8 @@ export function SortableMenuItem({
         return 'Trang tĩnh'
       case 'EXTERNAL_LINK':
         return 'Liên kết ngoài'
+      case 'DEPARTMENT':
+        return 'Bộ môn'
       default:
         return 'Không liên kết'
     }

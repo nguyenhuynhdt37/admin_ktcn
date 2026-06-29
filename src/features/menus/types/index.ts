@@ -10,7 +10,7 @@ export interface TargetInfo {
 export interface MenuItemNode {
   id: string
   title: string
-  target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | null
+  target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | 'DEPARTMENT' | null
   target_id: string | null
   target_info: TargetInfo | null
   external_url: string | null
@@ -41,7 +41,7 @@ export interface MenuListItem {
 
 export interface MenuItemPayload {
   title: string
-  target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | null
+  target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | 'DEPARTMENT' | null
   target_id: string | null
   external_url: string | null
   open_in_new_tab: boolean

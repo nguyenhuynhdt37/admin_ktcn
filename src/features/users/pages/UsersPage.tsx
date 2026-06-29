@@ -171,7 +171,7 @@ export function UsersPage() {
       accessorKey: 'roles',
       header: 'Vai trò',
       cell: ({ row }) => {
-        const roles = row.getValue('roles') as RoleData[]
+        const roles = (row.getValue('roles') || []) as RoleData[]
         return (
           <div className="flex flex-wrap gap-1">
             {roles.map((role) => (
@@ -207,7 +207,7 @@ export function UsersPage() {
       cell: ({ row }) => {
         const user = row.original
 
-        const isTargetSuperAdmin = user.roles.some((r) => r.code === 'super_admin')
+        const isTargetSuperAdmin = user.roles?.some((r) => r.code === 'super_admin') || false
         const canModify = !isTargetSuperAdmin || isCallerSuperAdmin
 
         return (

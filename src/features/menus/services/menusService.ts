@@ -61,6 +61,7 @@ export const menusService = {
   },
 
   // Lấy danh sách danh mục từ backend
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getCategories: async (): Promise<any[]> => {
     const response = await httpClient.get('/categories')
     return response.data

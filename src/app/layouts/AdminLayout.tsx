@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuthStore, type User as AuthUser } from '@/stores/authStore'
-import { useAuth } from '@/app/providers/AuthProvider'
 import { useTheme } from '@/app/providers/ThemeProvider'
 import { Button } from '@/shared/components/ui/button'
 import {
@@ -17,7 +16,6 @@ import { Drawer, DrawerContent, DrawerTrigger } from '@/shared/components/ui/dra
 import {
   LayoutDashboard,
   Users,
-  Palette,
   LogOut,
   Menu,
   Sun,
@@ -28,18 +26,15 @@ import {
   Bell,
   FileText,
   FolderOpen,
-  Tag,
-  Image,
-  BookOpen,
-  Sliders,
-  Shield,
-  Key,
   Layers,
-  Clock,
   FileSpreadsheet,
   Search,
   HelpCircle,
-  Sparkles,
+  Building,
+  Award,
+  Briefcase,
+  GraduationCap,
+  Image,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -49,50 +44,127 @@ import { CommandPalette } from '@/shared/components/CommandPalette'
 import { KeyboardShortcutsHelp } from '@/shared/components/KeyboardShortcutsHelp'
 import { getModifierKey, getAltKey } from '@/shared/utils/os'
 
+interface NavItem {
+  label: string
+  href?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: React.ComponentType<any>
+  permission?: string | string[] | null
+  children?: {
+    label: string
+    href: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon?: React.ComponentType<any>
+  }[]
+}
+
+interface NavSeparator {
+  type: 'separator'
+}
+
+interface SidebarNavItemProps {
+  item: NavItem
+  onClose?: () => void
+}
+
+function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const hasChildren = item.children && item.children.length > 0
+
+  if (!hasChildren) {
+    return (
+      <NavLink
+        to={item.href!}
+        onClick={onClose}
+        className={({ isActive }) =>
+          cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
+            isActive
+              ? 'bg-primary text-primary-foreground hover:bg-primary/95 hover:text-primary-foreground shadow-sm'
+              : 'text-muted-foreground'
+          )
+        }
+      >
+        <item.icon className="h-4.5 w-4.5" />
+        {item.label}
+      </NavLink>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground text-muted-foreground cursor-pointer bg-transparent border-none outline-hidden"
+      >
+        <div className="flex items-center gap-3">
+          <item.icon className="h-4.5 w-4.5" />
+          <span>{item.label}</span>
+        </div>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 transition-transform duration-200",
+            isOpen ? "transform rotate-180" : ""
+          )}
+        />
+      </button>
+      
+      {isOpen && (
+        <div className="pl-5 ml-5 mt-1 border-l border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
+          {item.children.map((child) => (
+            <NavLink
+              key={child.href}
+              to={child.href}
+              onClick={onClose}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
+                  isActive
+                    ? 'bg-accent text-accent-foreground font-semibold shadow-2xs'
+                    : 'text-muted-foreground'
+                )
+              }
+            >
+              {child.icon ? <child.icon className="h-4 w-4 shrink-0" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />}
+              {child.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface SidebarContentProps {
   user: AuthUser | null
   onClose?: () => void
 }
 
 function SidebarContent({ user, onClose }: SidebarContentProps) {
-  // ── Sidebar Navigation Sections ──
-  const navSections = [
+  // Flat list of navigation items with separator flags
+  const navItems: (NavItem | NavSeparator)[] = [
+    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'menu.dashboard' },
+    { type: 'separator' },
+    { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' },
+    { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
+    { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
+    { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
+    { type: 'separator' },
+    { label: 'Thành viên', href: '/users', icon: Users, permission: null },
     {
-      label: 'Tổng quan',
-      items: [
-        { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'menu.dashboard' as string | string[] | null },
-      ],
+      label: 'Đơn vị',
+      icon: Building,
+      permission: null,
+      children: [
+        { label: 'Bộ môn', href: '/departments', icon: Award },
+        { label: 'Chức vụ', href: '/positions', icon: Briefcase },
+        { label: 'Giảng viên', href: '/teachers', icon: GraduationCap },
+      ]
     },
-    {
-      label: 'Nội dung',
-      items: [
-        { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' as string | string[] | null },
-        { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' as string | string[] | null },
-        { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' as string | string[] | null },
-      ],
-    },
-    {
-      label: 'Quản trị',
-      items: [
-        { label: 'Thành viên', href: '/users', icon: Users, permission: null },
-        { label: 'Tính năng hệ thống', href: '/features', icon: Layers, permission: null },
-      ],
-    },
-    {
-      label: 'Giám sát',
-      items: [
-        { label: 'Nhật ký hoạt động', href: '/audit-logs', icon: FileSpreadsheet, permission: 'menu.audit' as string | string[] | null },
-      ],
-    },
-    {
-      label: 'Hệ thống',
-      items: [
-
-      ],
-    },
+    { label: 'Tính năng hệ thống', href: '/features', icon: Layers, permission: null },
+    { type: 'separator' },
+    { label: 'Nhật ký hoạt động', href: '/audit-logs', icon: FileSpreadsheet, permission: 'menu.audit' },
   ]
-
-  const filteredSections = navSections
 
   return (
     <div className="flex h-full flex-col border-r bg-card text-card-foreground">
@@ -107,35 +179,14 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {filteredSections.map((section, idx) => (
-          <div key={section.label}>
-            {idx > 0 && <div className="mb-3 border-t border-border/60" />}
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              {section.label}
-            </p>
-            <div className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
-                      isActive
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/95 hover:text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground'
-                    )
-                  }
-                >
-                  <item.icon className="h-4.5 w-4.5" />
-                  {item.label}
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5">
+        {navItems.map((item, idx) => {
+          if ('type' in item && item.type === 'separator') {
+            return <div key={idx} className="my-2 border-t border-border/40 mx-2" />
+          }
+          const navItem = item as NavItem
+          return <SidebarNavItem key={navItem.label} item={navItem} onClose={onClose} />
+        })}
       </nav>
 
       <div className="border-t p-4">
