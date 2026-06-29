@@ -13,6 +13,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { CategoryStatus } from '../types'
+import { useAuth } from '@/app/providers/AuthProvider'
 
 interface SortableCategoryNodeProps {
   id: string
@@ -55,6 +56,10 @@ export function SortableCategoryNode({
     transition,
     isDragging,
   } = useSortable({ id })
+  const { hasPermission } = useAuth()
+  const canUpdate = hasPermission('category.update')
+  const canDelete = hasPermission('category.delete')
+  const canCreate = hasPermission('category.create')
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -80,7 +85,7 @@ export function SortableCategoryNode({
         className={cn(
           'flex items-center justify-between rounded-lg border bg-card p-3 shadow-xs hover:border-primary/50 transition-colors',
           isSelected ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-border',
-          !isVisible && 'bg-muted/30 opacity-75',
+          (!isVisible || normalizedStatus !== 'ACTIVE') && 'bg-muted/30 opacity-70',
           isGhost && 'border-dashed border-primary/40',
           isGhost && !isValid && 'border-destructive/60 border-dashed text-destructive bg-destructive/5'
         )}
@@ -100,15 +105,17 @@ export function SortableCategoryNode({
           )}
 
           {/* Drag Handle */}
-          <button
-            {...attributes}
-            {...listeners}
-            style={{ touchAction: 'none' }}
-            className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing rounded-md hover:bg-muted"
-            title="Kéo thả để di chuyển vị trí tự do"
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
+          {canUpdate && (
+            <button
+              {...attributes}
+              {...listeners}
+              style={{ touchAction: 'none' }}
+              className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing rounded-md hover:bg-muted"
+              title="Kéo thả để di chuyển vị trí tự do"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
 
           {/* Icon Folder */}
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted border">
@@ -143,7 +150,7 @@ export function SortableCategoryNode({
         {/* Khối bên phải: Thêm con, Edit, Delete */}
         <div className="flex items-center gap-1 shrink-0 ml-2">
           {/* Nút Thêm Danh Mục Con */}
-          {depth < 3 && onAddChild && (
+          {depth < 3 && onAddChild && canCreate && (
             <Button
               variant="ghost"
               size="icon"
@@ -169,15 +176,17 @@ export function SortableCategoryNode({
           </Button>
 
           {/* Nút Xóa */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-            title="Xóa danh mục này"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+              title="Xóa danh mục này"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

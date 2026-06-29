@@ -55,71 +55,44 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, onClose }: SidebarContentProps) {
-  const { hasPermission } = useAuth()
-
   // ── Sidebar Navigation Sections ──
   const navSections = [
     {
       label: 'Tổng quan',
       items: [
-        { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' as string | string[] | null },
+        { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'menu.dashboard' as string | string[] | null },
       ],
     },
     {
       label: 'Nội dung',
       items: [
-        { label: 'Bài viết', href: '/articles', icon: FileText, permission: ['article.view', 'article.view_own'] as string | string[] | null },
-        { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'category.view' as string | string[] | null },
-        { label: 'Thẻ (Tag)', href: '/tags', icon: Tag, permission: 'tag.view' as string | string[] | null },
-        { label: 'Thư viện Media', href: '/media', icon: Image, permission: ['media.view', 'media.view_own'] as string | string[] | null },
-        { label: 'Trang tĩnh', href: '/pages', icon: BookOpen, permission: 'page.view' as string | string[] | null },
-        { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.view' as string | string[] | null },
-        { label: 'Banner quảng cáo', href: '/banners', icon: Sliders, permission: 'banner.view' as string | string[] | null },
+        { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' as string | string[] | null },
+        { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' as string | string[] | null },
+        { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' as string | string[] | null },
       ],
     },
     {
       label: 'Quản trị',
       items: [
-        { label: 'Thành viên', href: '/users', icon: Users, permission: 'user.view' as string | string[] | null },
-        { label: 'Vai trò', href: '/roles', icon: Shield, permission: 'role.view' as string | string[] | null },
-        { label: 'Quyền hạn', href: '/permissions', icon: Key, permission: 'permission.view' as string | string[] | null },
-        { label: 'Tính năng hệ thống', href: '/features', icon: Layers, permission: 'feature.view' as string | string[] | null },
+        { label: 'Thành viên', href: '/users', icon: Users, permission: null },
+        { label: 'Tính năng hệ thống', href: '/features', icon: Layers, permission: null },
       ],
     },
     {
       label: 'Giám sát',
       items: [
-        { label: 'Nhật ký hoạt động', href: '/audit-logs', icon: FileSpreadsheet, permission: 'audit.view' as string | string[] | null },
-        { label: 'Lịch sử đăng nhập', href: '/login-history', icon: Clock, permission: 'login_history.view' as string | string[] | null },
+        { label: 'Nhật ký hoạt động', href: '/audit-logs', icon: FileSpreadsheet, permission: 'menu.audit' as string | string[] | null },
       ],
     },
     {
       label: 'Hệ thống',
       items: [
-        { label: 'Cấu hình hệ thống', href: '/settings', icon: Settings, permission: 'setting.view' as string | string[] | null },
-        { label: 'Cấu hình AI & Ngân sách', href: '/settings/ai', icon: Sparkles, permission: 'ai.view' as string | string[] | null },
-      ],
-    },
-    {
-      label: 'Công cụ',
-      items: [
-        { label: 'Thư viện giao diện', href: '/ui-sandbox', icon: Palette, permission: null as string | string[] | null },
+
       ],
     },
   ]
 
   const filteredSections = navSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => {
-        if (item.permission === null) return true
-        if (Array.isArray(item.permission)) {
-          return item.permission.some((p) => hasPermission(p))
-        }
-        return hasPermission(item.permission)
-      }),
-    }))
-    .filter((section) => section.items.length > 0)
 
   return (
     <div className="flex h-full flex-col border-r bg-card text-card-foreground">
@@ -216,7 +189,6 @@ export function AdminLayout() {
   // 5. Phím tắt điều hướng nhanh (Alt+D, Alt+U, Alt+R, Alt+L)
   useHotkeys('alt+d', () => navigate('/dashboard'))
   useHotkeys('alt+u', () => navigate('/users'))
-  useHotkeys('alt+r', () => navigate('/roles'))
   useHotkeys('alt+l', () => navigate('/audit-logs'))
 
   return (

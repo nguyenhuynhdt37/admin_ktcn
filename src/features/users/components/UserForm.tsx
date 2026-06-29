@@ -5,11 +5,9 @@ import { toast } from 'sonner'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { usersService } from '../services/usersService'
-import { rolesService } from '@/features/roles/services/rolesService'
 import { AvatarSection } from './form/AvatarSection'
 import { AccountDetailsSection } from './form/AccountDetailsSection'
 import { BioSection } from './form/BioSection'
-import { RolesSection } from './form/RolesSection'
 import { StatusSection } from './form/StatusSection'
 
 interface UserFormProps {
@@ -21,6 +19,8 @@ export function UserForm({ userId }: UserFormProps) {
   const queryClient = useQueryClient()
 
   const isEditMode = !!userId
+  
+  const canSave = true
 
   // Form States
   const [username, setUsername] = useState('')
@@ -32,7 +32,6 @@ export function UserForm({ userId }: UserFormProps) {
   const [bio, setBio] = useState('')
   const [avatarId, setAvatarId] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -44,16 +43,7 @@ export function UserForm({ userId }: UserFormProps) {
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [isCheckingUsername, setIsCheckingUsername] = useState(false)
 
-  // 1. Fetch all roles
-  const { data: allRoles = [] } = useQuery({
-    queryKey: ['roles-list-all'],
-    queryFn: rolesService.list,
-  })
-
-  // Filter roles: Do NOT allow selecting super_admin
-  const assignableRoles = allRoles.filter((role) => role.code !== 'super_admin')
-
-  // 2. Fetch user detail in Edit Mode
+  // Fetch user detail in Edit Mode
   const { data: userDetail, isLoading: isLoadingDetail } = useQuery({
     queryKey: ['users', userId],
     queryFn: () => usersService.getDetail(userId!),
@@ -69,7 +59,6 @@ export function UserForm({ userId }: UserFormProps) {
       setPhone(userDetail.phone || '')
       setBio(userDetail.bio || '')
       setAvatarId(userDetail.avatar_id)
-      setSelectedRoleIds(userDetail.roles.map((r) => r.id))
       setIsActive(userDetail.is_active)
 
       if (userDetail.avatar_id) {
@@ -154,7 +143,6 @@ export function UserForm({ userId }: UserFormProps) {
         phone: phone || null,
         bio: bio || null,
         avatar_id: avatarId,
-        role_ids: selectedRoleIds,
         is_active: isActive,
       }
 
@@ -176,11 +164,7 @@ export function UserForm({ userId }: UserFormProps) {
       const errorData = err?.response?.data?.error
       const code = errorData?.code
 
-      if (code === 'SUPERADMIN_ASSIGNMENT_DENIED') {
-        toast.error('Lỗi bảo mật: Chỉ Super Admin mới có quyền gán hoặc gỡ vai trò Super Admin.')
-      } else if (code === 'SUPERADMIN_ROLE_PROTECTED') {
-        toast.error('Lỗi bảo vệ: Không được phép thay đổi vai trò hoặc trạng thái của tài khoản Super Admin.')
-      } else if (code === 'USERNAME_DUPLICATE') {
+      if (code === 'USERNAME_DUPLICATE') {
         toast.error('Tên đăng nhập đã tồn tại trên hệ thống.')
       } else if (code === 'EMAIL_DUPLICATE') {
         toast.error('Địa chỉ email đã được sử dụng bởi người dùng khác.')
@@ -194,6 +178,11 @@ export function UserForm({ userId }: UserFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!canSave) {
+      toast.error('Bạn không có quyền thực hiện thao tác này.')
+      return
+    }
 
     // 1. Full name validation
     if (fullName.trim().length < 2 || fullName.trim().length > 50) {
@@ -243,19 +232,7 @@ export function UserForm({ userId }: UserFormProps) {
       return
     }
 
-    // 7. Role assignment validation
-    if (selectedRoleIds.length === 0) {
-      toast.error('Vui lòng gán ít nhất một vai trò cho thành viên')
-      return
-    }
-
     saveMutation.mutate()
-  }
-
-  const handleToggleRole = (roleId: string) => {
-    setSelectedRoleIds((prev) =>
-      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
-    )
   }
 
   if (isEditMode && isLoadingDetail) {
@@ -319,12 +296,14 @@ export function UserForm({ userId }: UserFormProps) {
             isCheckingEmail={isCheckingEmail}
             usernameError={usernameError}
             isCheckingUsername={isCheckingUsername}
+            disabled={!canSave}
           />
 
           <BioSection
             key={userId || 'new'}
             bio={bio}
             setBio={setBio}
+            disabled={!canSave}
           />
         </div>
 
@@ -337,17 +316,13 @@ export function UserForm({ userId }: UserFormProps) {
               setIsUploading={setIsUploading}
               setAvatarId={setAvatarId}
               setAvatarUrl={setAvatarUrl}
+              disabled={!canSave}
             />
 
             <StatusSection
               isActive={isActive}
               setIsActive={setIsActive}
-            />
-
-            <RolesSection
-              assignableRoles={assignableRoles}
-              selectedRoleIds={selectedRoleIds}
-              handleToggleRole={handleToggleRole}
+              disabled={!canSave}
             />
           </div>
         </div>
@@ -362,13 +337,15 @@ export function UserForm({ userId }: UserFormProps) {
           >
             Hủy bỏ
           </Button>
-          <Button
-            type="submit"
-            disabled={saveMutation.isPending}
-            className="cursor-pointer"
-          >
-            {saveMutation.isPending ? 'Đang lưu...' : 'Xác nhận lưu'}
-          </Button>
+          {canSave && (
+            <Button
+              type="submit"
+              disabled={saveMutation.isPending}
+              className="cursor-pointer"
+            >
+              {saveMutation.isPending ? 'Đang lưu...' : 'Xác nhận lưu'}
+            </Button>
+          )}
         </div>
       </form>
     </div>

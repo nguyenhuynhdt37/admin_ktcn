@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CmsEditor } from '@/shared/components/CmsEditor'
-import { SEOAssistantWidget } from '@/features/ai-settings/components/SEOAssistantWidget'
+
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/components/ui/card'
@@ -88,12 +88,7 @@ export function EditorTestPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Widget trợ lý SEO AI */}
-              <SEOAssistantWidget
-                title={title}
-                description={description}
-                content={content}
-                onSEOGenerated={handleSEOGenerated}
-              />
+              
 
               <div className="space-y-1.5">
                 <Label htmlFor="seoTitle" className="text-xs font-semibold text-foreground/80">Tiêu đề SEO (Meta Title)</Label>

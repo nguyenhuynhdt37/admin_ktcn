@@ -24,6 +24,7 @@ import { menusService } from '../services/menusService'
 import { SortableMenuItem } from './SortableMenuItem'
 import type { MenuItemNode, FlatMenuItem } from '../types'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/app/providers/AuthProvider'
 
 interface MenuDragDropEditorProps {
   menuId: string
@@ -104,6 +105,10 @@ export function MenuDragDropEditor({
   onSelectItem,
   refetchTree,
 }: MenuDragDropEditorProps) {
+  const { hasPermission } = useAuth()
+  const canUpdate = hasPermission('menu.update')
+  const canCreate = hasPermission('menu.create')
+
   const queryClient = useQueryClient()
   const [flatItems, setFlatItems] = useState<FlatMenuItem[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -173,7 +178,7 @@ export function MenuDragDropEditor({
         parent_id: parentId,
       } as any),
     onSuccess: (newItm) => {
-      toast.success(newItm.parent_id ? 'Đã thêm mục menu con mới!' : 'Đã thêm mục menu mới!')
+      toast.success((newItm as any).parent_id ? 'Đã thêm mục menu con mới!' : 'Đã thêm mục menu mới!')
       refetchTree()
       onSelectItem(newItm.id) // Tự động mở form cấu hình
     },
@@ -197,11 +202,14 @@ export function MenuDragDropEditor({
 
   // Bắt đầu kéo
   const handleDragStart = (event: DragStartEvent) => {
+    if (!canUpdate) return
     setActiveId(event.active.id as string)
+    setPlaceholderInfo(null)
   }
 
   // Khi đang di chuyển chuột (Tính toán vị trí thả dự kiến và render placeholder line/box)
   const handleDragMove = (event: DragOverEvent) => {
+    if (!canUpdate) return
     const { active, over, delta } = event
     if (!over) {
       setPlaceholderInfo(null)
@@ -211,6 +219,9 @@ export function MenuDragDropEditor({
     const activeId = active.id as string
     const overId = over.id as string
 
+    // Bỏ qua nếu rê chuột qua placeholder ảo
+    if (overId === 'placeholder') return
+
     const oldIndex = flatItems.findIndex((item) => item.id === activeId)
     const overIndex = flatItems.findIndex((item) => item.id === overId)
 
@@ -219,9 +230,10 @@ export function MenuDragDropEditor({
     // 1. Tìm cụm con cháu của item đang kéo
     const descendants: FlatMenuItem[] = []
     const draggedItem = flatItems[oldIndex]
+    if (!draggedItem) return
 
     let nextIdx = oldIndex + 1
-    while (nextIdx < flatItems.length && flatItems[nextIdx].depth > draggedItem.depth) {
+    while (nextIdx < flatItems.length && flatItems[nextIdx] && flatItems[nextIdx].depth > draggedItem.depth) {
       descendants.push(flatItems[nextIdx])
       nextIdx++
     }
@@ -244,7 +256,10 @@ export function MenuDragDropEditor({
     if (targetIndex === -1) targetIndex = itemsWithoutCluster.length
 
     const isBelow = overIndex > oldIndex
-    const insertIndex = isBelow ? targetIndex + 1 : targetIndex
+    const insertIndex = Math.min(
+      itemsWithoutCluster.length,
+      isBelow ? targetIndex + 1 : targetIndex
+    )
 
     // 2. Tính toán depth dự kiến của placeholder (lệch ngang delta.x)
     const horizontalOffset = Math.round(delta.x / 28)
@@ -317,6 +332,7 @@ export function MenuDragDropEditor({
 
   // Kết thúc kéo thả (Thả chuột)
   const handleDragEnd = (event: DragEndEvent) => {
+    if (!canUpdate) return
     const cachedPlaceholder = placeholderInfo
     
     // Gộp việc reset activeId và placeholderInfo vào cùng chu trình với state flatItems
@@ -416,67 +432,71 @@ export function MenuDragDropEditor({
     const oldIndex = flatItems.findIndex((item) => item.id === activeId)
     const draggedItem = flatItems[oldIndex]
 
-    const descendants: FlatMenuItem[] = []
-    let nextIdx = oldIndex + 1
-    while (nextIdx < flatItems.length && flatItems[nextIdx].depth > draggedItem.depth) {
-      descendants.push(flatItems[nextIdx])
-      nextIdx++
-    }
-
-    // Đánh dấu ghost cho item đang kéo và con cháu của nó TẠI VỊ TRÍ CŨ
-    displayItems = displayItems.map((item) => {
-      if (item.id === activeId || descendants.some((d) => d.id === item.id)) {
-        return { ...item, isGhost: true }
+    if (draggedItem) {
+      const descendants: FlatMenuItem[] = []
+      let nextIdx = oldIndex + 1
+      while (nextIdx < flatItems.length && flatItems[nextIdx] && flatItems[nextIdx].depth > draggedItem.depth) {
+        descendants.push(flatItems[nextIdx])
+        nextIdx++
       }
-      return item
-    })
 
-    // Xác định vị trí chèn placeholder trong mảng chứa cả ghost item ở vị trí cũ
-    let unfilteredInsertIndex = displayItems.length
-    let nonGhostCount = 0
-    for (let i = 0; i < displayItems.length; i++) {
-      if (!displayItems[i].isGhost) {
-        if (nonGhostCount === placeholderInfo.index) {
-          unfilteredInsertIndex = i
-          break
+      // Đánh dấu ghost cho item đang kéo và con cháu của nó TẠI VỊ TRÍ CŨ
+      displayItems = displayItems.map((item) => {
+        if (item.id === activeId || descendants.some((d) => d.id === item.id)) {
+          return { ...item, isGhost: true }
         }
-        nonGhostCount++
-      }
-    }
+        return item
+      })
 
-    // Tạo nhãn mô tả vị trí thả cực kỳ chi tiết, nói rõ nguyên nhân lỗi nếu có
-    let placeholderTitle = ''
-    if (placeholderInfo.isValid) {
-      if (placeholderInfo.depth === 1) {
-        placeholderTitle = '↳ Thả làm mục ngoài cùng (Cấp 1)'
-      } else {
-        placeholderTitle = `↳ Thả làm con của "${placeholderInfo.parentTitle || 'Mục phía trước'}" (Cấp ${placeholderInfo.depth})`
+      // Xác định vị trí chèn placeholder trong mảng chứa cả ghost item ở vị trí cũ
+      let unfilteredInsertIndex = displayItems.length
+      let nonGhostCount = 0
+      for (let i = 0; i < displayItems.length; i++) {
+        if (!displayItems[i].isGhost) {
+          if (nonGhostCount === placeholderInfo.index) {
+            unfilteredInsertIndex = i
+            break
+          }
+          nonGhostCount++
+        }
       }
-    } else {
-      if (placeholderInfo.isAdoptError) {
-        placeholderTitle = '🚫 Không thể thả: Không được bọc các mục độc lập đứng sau'
-      } else if (placeholderInfo.isDraggedItemOffending) {
-        placeholderTitle = '🚫 Không thể thả: Vị trí này vượt quá giới hạn 3 cấp'
-      } else {
-        placeholderTitle = `🚫 Không thể thả: Làm mục con "${placeholderInfo.offendingTitle}" vượt quá 3 cấp`
-      }
-    }
 
-    displayItems.splice(unfilteredInsertIndex, 0, {
-      id: 'placeholder',
-      title: placeholderTitle,
-      depth: placeholderInfo.depth,
-      target_type: null,
-      external_url: null,
-      open_in_new_tab: false,
-      icon: null,
-      sort_order: 0,
-      is_visible: true,
-      parent_id: null,
-      has_link: false,
-      isPlaceholder: true, // Đánh dấu item là placeholder
-      isValid: placeholderInfo.isValid,
-    })
+      // Tạo nhãn mô tả vị trí thả cực kỳ chi tiết, nói rõ nguyên nhân lỗi nếu có
+      let placeholderTitle = ''
+      if (placeholderInfo.isValid) {
+        if (placeholderInfo.depth === 1) {
+          placeholderTitle = '↳ Thả làm mục ngoài cùng (Cấp 1)'
+        } else {
+          placeholderTitle = `↳ Thả làm con của "${placeholderInfo.parentTitle || 'Mục phía trước'}" (Cấp ${placeholderInfo.depth})`
+        }
+      } else {
+        if (placeholderInfo.isAdoptError) {
+          placeholderTitle = '🚫 Không thể thả: Không được bọc các mục độc lập đứng sau'
+        } else if (placeholderInfo.isDraggedItemOffending) {
+          placeholderTitle = '🚫 Không thể thả: Vị trí này vượt quá giới hạn 3 cấp'
+        } else {
+          placeholderTitle = `🚫 Không thể thả: Làm mục con "${placeholderInfo.offendingTitle}" vượt quá 3 cấp`
+        }
+      }
+
+      displayItems.splice(unfilteredInsertIndex, 0, {
+        id: 'placeholder',
+        title: placeholderTitle,
+        depth: placeholderInfo.depth,
+        target_type: null,
+        target_id: null,
+        target_info: null,
+        external_url: null,
+        open_in_new_tab: false,
+        icon: null,
+        sort_order: 0,
+        is_visible: true,
+        parent_id: null,
+        has_link: false,
+        isPlaceholder: true, // Đánh dấu item là placeholder
+        isValid: placeholderInfo.isValid,
+      })
+    }
   }
 
   const activeItem = flatItems.find((item) => item.id === activeId)
@@ -500,29 +520,33 @@ export function MenuDragDropEditor({
               <span>Đang tự động lưu...</span>
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => createMutation.mutate(null)}
-            className="flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            Thêm mục menu
-          </Button>
+          {canCreate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => createMutation.mutate(null)}
+              className="flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              Thêm mục menu
+            </Button>
+          )}
         </div>
       </div>
 
       {flatItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed rounded-lg bg-muted/20">
           <p className="text-sm text-muted-foreground">Chưa có mục menu nào trong danh sách.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => createMutation.mutate(null)}
-            className="mt-3 cursor-pointer"
-          >
-            Tạo mục đầu tiên
-          </Button>
+          {canCreate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => createMutation.mutate(null)}
+              className="mt-3 cursor-pointer"
+            >
+              Tạo mục đầu tiên
+            </Button>
+          )}
         </div>
       ) : (
         <div className="relative border rounded-lg bg-card/50 p-4 min-h-[150px]">

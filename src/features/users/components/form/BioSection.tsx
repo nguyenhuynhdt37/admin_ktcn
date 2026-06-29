@@ -7,9 +7,10 @@ import { CmsEditor } from '@/shared/components/CmsEditor'
 interface BioSectionProps {
   bio: string
   setBio: (bio: string) => void
+  disabled?: boolean
 }
 
-export function BioSection({ bio, setBio }: BioSectionProps) {
+export function BioSection({ bio, setBio, disabled }: BioSectionProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const handleEsc = useCallback((e: KeyboardEvent) => {
@@ -53,6 +54,7 @@ export function BioSection({ bio, setBio }: BioSectionProps) {
         <CmsEditor
           value={bio}
           onChange={setBio}
+          disabled={disabled}
           placeholder="Giới thiệu chi tiết kỹ năng, kinh nghiệm biên tập, hoặc tiểu sử của thành viên..."
           minHeight={280}
           maxHeight={350}
@@ -89,6 +91,7 @@ export function BioSection({ bio, setBio }: BioSectionProps) {
         <CmsEditor
           value={bio}
           onChange={setBio}
+          disabled={disabled}
           placeholder="Giới thiệu chi tiết kỹ năng, kinh nghiệm biên tập, hoặc tiểu sử của thành viên..."
           minHeight={400}
           maxHeight={9999}

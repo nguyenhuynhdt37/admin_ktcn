@@ -10,6 +10,7 @@ import type { CategoryTreeNode } from '@/features/categories/types'
 interface CategoryTreeSelectProps {
   value: string | null
   onChange: (id: string) => void
+  disabled?: boolean
 }
 
 /** Lọc tree theo search keyword (giữ parent nếu child match) */
@@ -36,12 +37,14 @@ function TreeNode({
   onSelect,
   level,
   defaultExpanded,
+  disabled,
 }: {
   node: CategoryTreeNode
   selectedId: string | null
   onSelect: (id: string) => void
   level: number
   defaultExpanded: boolean
+  disabled?: boolean
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const isSelected = node.id === selectedId
@@ -54,12 +57,13 @@ function TreeNode({
         className={cn(
           'flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors',
           isSelected && 'bg-primary/10 text-primary font-medium',
-          !isActive && 'opacity-50 cursor-not-allowed',
-          isActive && !isSelected && 'hover:bg-muted'
+          (!isActive || disabled) && 'opacity-50 cursor-not-allowed',
+          isActive && !isSelected && !disabled && 'hover:bg-muted'
         )}
         style={{ paddingLeft: `${level * 20 + 8}px` }}
         onClick={() => {
-          if (isActive) onSelect(node.id)
+          if (disabled || !isActive) return
+          onSelect(node.id)
         }}
       >
         {hasChildren ? (
@@ -68,6 +72,7 @@ function TreeNode({
               e.stopPropagation()
               setExpanded(!expanded)
             }}
+            disabled={disabled}
             className="shrink-0 p-0.5 rounded hover:bg-accent"
           >
             {expanded ? (
@@ -101,13 +106,14 @@ function TreeNode({
             onSelect={onSelect}
             level={level + 1}
             defaultExpanded={defaultExpanded}
+            disabled={disabled}
           />
         ))}
     </div>
   )
 }
 
-export function CategoryTreeSelect({ value, onChange }: CategoryTreeSelectProps) {
+export function CategoryTreeSelect({ value, onChange, disabled }: CategoryTreeSelectProps) {
   const [searchKeyword, setSearchKeyword] = useState('')
 
   const {
@@ -132,6 +138,7 @@ export function CategoryTreeSelect({ value, onChange }: CategoryTreeSelectProps)
           onChange={(e) => setSearchKeyword(e.target.value)}
           placeholder="Tìm kiếm danh mục..."
           className="h-8 pl-8 text-sm"
+          disabled={disabled}
         />
       </div>
 
@@ -157,6 +164,7 @@ export function CategoryTreeSelect({ value, onChange }: CategoryTreeSelectProps)
               onSelect={onChange}
               level={0}
               defaultExpanded={isSearching}
+              disabled={disabled}
             />
           ))
         )}

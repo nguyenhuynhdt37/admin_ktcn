@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Loader2, Trash2, Camera, ChevronDown, ChevronRight, Globe } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { aiSettingsService } from '@/features/ai-settings/services/aiSettingsService'
+
 import { httpClient } from '@/services/http/client'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,15 @@ function generateSlug(text: string): string {
     .replace(/^-+|-+$/g, '') // Bỏ - ở đầu/cuối
 }
 
+interface SEOResolved {
+  seo_title: string
+  seo_description: string
+  seo_keywords: string
+  seo_canonical: string
+  seo_robots: string
+  seo_og_image_url: string | null
+}
+
 interface CategorySEOSectionProps {
   name: string
   description: string
@@ -40,9 +50,11 @@ interface CategorySEOSectionProps {
   seoRobots: string
   seoOgImageId: string | null
   thumbnailUrl: string | null
+  seoResolved?: SEOResolved
   
   // Handlers
   onChange: (field: any, value: any) => void
+  disabled?: boolean
 }
 
 export function CategorySEOSection({
@@ -55,7 +67,9 @@ export function CategorySEOSection({
   seoRobots,
   seoOgImageId,
   thumbnailUrl,
+  seoResolved,
   onChange,
+  disabled = false,
 }: CategorySEOSectionProps) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -65,6 +79,17 @@ export function CategorySEOSection({
   const [ogImageUrl, setOgImageUrl] = useState<string | null>(null)
 
   const ogInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch AI configuration omitted as AI is configured via .env now
+  const isAiConfigured = true;
+  let aiStatusText = "Tự động phân tích tên, mô tả danh mục để sinh thẻ SEO tối ưu bằng AI.";
+
+  // Resolve fallback og image locally if it's pointing to the production domain
+  const displayFallbackOgUrl = seoResolved?.seo_og_image_url
+    ? (seoResolved.seo_og_image_url.startsWith('https://kcnt.vinhuni.edu.vn')
+        ? seoResolved.seo_og_image_url.replace('https://kcnt.vinhuni.edu.vn', '')
+        : seoResolved.seo_og_image_url)
+    : null
 
   // Fetch URL for existing OG Image
   useEffect(() => {
@@ -85,6 +110,7 @@ export function CategorySEOSection({
 
   // AI Gen SEO
   const handleGenerateSEO = async () => {
+    if (disabled) return
     if (!name.trim()) {
       toast.error('Vui lòng nhập tên danh mục trước khi sinh SEO.')
       return
@@ -100,14 +126,16 @@ export function CategorySEOSection({
 
     setIsGenerating(true)
     try {
-      const response = await aiSettingsService.generateSEO({
+      const response = await httpClient.post('/ai/generate-seo', {
         title: name,
         description: stripHtml(description) || '',
+        category_name: name,
       })
+      const resData = response.data;
 
-      onChange('seo_title', response.seo_title)
-      onChange('seo_description', response.seo_description)
-      onChange('seo_keywords', response.seo_keywords || '')
+      onChange('seo_title', resData.seo_title)
+      onChange('seo_description', resData.seo_description)
+      onChange('seo_keywords', resData.seo_keywords || '')
       toast.success('Đã tự động tạo các thẻ SEO tối ưu bằng AI!')
     } catch (error: any) {
       const errorCode = error?.response?.data?.error_code
@@ -122,7 +150,8 @@ export function CategorySEOSection({
   }
 
   // Handle Image Upload for OG Image
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -146,11 +175,15 @@ export function CategorySEOSection({
     }
   }
 
-  const removeImage = () => {
+  const handleOgImageRemove = () => {
+    if (disabled) return
     onChange('seo_og_image_id', null)
     setOgImageUrl(null)
     toast.success('Đã gỡ bỏ hình ảnh Open Graph.')
   }
+
+  const fallbackTitle = seoResolved?.seo_title || `${name || 'Tên danh mục'} | Trường Kỹ thuật và Công nghệ - Đại học Vinh`
+  const fallbackDesc = seoResolved?.seo_description || (description ? stripHtml(description).slice(0, 155) : "Mô tả mặc định của website...")
 
   return (
     <div className="space-y-4">
@@ -162,9 +195,9 @@ export function CategorySEOSection({
         </h4>
 
         {/* Nút Sinh SEO bằng AI */}
-        <div className="flex items-center justify-between bg-primary/5 p-3 rounded-lg border border-primary/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-primary/5 p-3 rounded-lg border border-primary/10">
           <div className="text-[11px] text-muted-foreground max-w-[240px]">
-            Tự động phân tích tên, mô tả danh mục để sinh thẻ SEO tối ưu bằng AI.
+            {aiStatusText}
           </div>
           <Button
             type="button"
@@ -172,7 +205,7 @@ export function CategorySEOSection({
             size="sm"
             className="h-8 gap-1.5 border-primary/30 text-xs text-primary hover:bg-primary/10 cursor-pointer"
             onClick={handleGenerateSEO}
-            disabled={isGenerating}
+            disabled={!isAiConfigured || isGenerating || disabled}
           >
             {isGenerating ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -187,34 +220,35 @@ export function CategorySEOSection({
         <div className="bg-background border rounded-lg p-3 space-y-1 text-left shadow-xs">
           <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Xem trước trên Google</div>
           <div className="text-[#1a0dab] hover:underline text-[16px] leading-[20px] font-medium truncate">
-            {seoTitle.trim() || `${name || 'Tên danh mục'} | Trường Kỹ thuật và Công nghệ - Đại học Vinh`}
+            {seoTitle.trim() || fallbackTitle}
           </div>
           <div className="text-[#006621] text-[12px] leading-[16px] truncate flex items-center gap-1">
-            https://kcnt.vinhuni.edu.vn/{name ? generateSlug(name) : 'danh-muc'}
+            {seoCanonical.trim() || seoResolved?.seo_canonical || `https://kcnt.vinhuni.edu.vn/${name ? generateSlug(name) : 'danh-muc'}`}
           </div>
           <div className="text-[#545454] text-[13px] leading-[18px] line-clamp-2">
-            {seoDescription.trim() || (description ? stripHtml(description).slice(0, 155) + '...' : 'Trang thông tin chính thức của Trường Kỹ thuật và Công nghệ - Đại học Vinh.')}
+            {seoDescription.trim() || fallbackDesc}
           </div>
         </div>
 
         {/* 1. SEO Title */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <Label htmlFor="seo_title" className="text-xs font-semibold text-foreground/80">
+            <Label htmlFor="cat_seo_title" className="text-xs font-semibold text-foreground/80">
               SEO Title
             </Label>
             <span className={cn(
               "text-[10px]",
               seoTitle.length > 60 ? "text-destructive font-medium" : "text-muted-foreground"
             )}>
-              {seoTitle.length || (name ? name.length + 46 : 46)}/60 ký tự {!seoTitle && <span className="text-[9px] opacity-75">(tự sinh)</span>}
+              {seoTitle.length || (seoResolved?.seo_title ? seoResolved.seo_title.length : (name ? name.length + 46 : 46))}/60 ký tự {!seoTitle && <span className="text-[9px] opacity-75">(tự sinh)</span>}
             </span>
           </div>
           <Input
-            id="seo_title"
+            id="cat_seo_title"
             value={seoTitle}
+            disabled={disabled}
             onChange={(e) => onChange('seo_title', e.target.value)}
-            placeholder={`${name || 'Tên danh mục'} | Trường Kỹ thuật và Công nghệ - Đại học Vinh`}
+            placeholder={fallbackTitle}
             className="h-9 text-sm"
           />
         </div>
@@ -222,35 +256,37 @@ export function CategorySEOSection({
         {/* 2. SEO Description */}
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
-            <Label htmlFor="seo_description" className="text-xs font-semibold text-foreground/80">
+            <Label htmlFor="cat_seo_desc" className="text-xs font-semibold text-foreground/80">
               SEO Description
             </Label>
             <span className={cn(
               "text-[10px]",
               seoDescription.length > 160 ? "text-destructive font-medium" : "text-muted-foreground"
             )}>
-              {seoDescription.length || (description ? stripHtml(description).length : 74)}/160 ký tự {!seoDescription && <span className="text-[9px] opacity-75">(tự sinh)</span>}
+              {seoDescription.length || (seoResolved?.seo_description ? seoResolved.seo_description.length : (description ? stripHtml(description).length : 74))}/160 ký tự {!seoDescription && <span className="text-[9px] opacity-75">(tự sinh)</span>}
             </span>
           </div>
           <Textarea
-            id="seo_description"
+            id="cat_seo_desc"
             value={seoDescription}
+            disabled={disabled}
             onChange={(e) => onChange('seo_description', e.target.value)}
-            placeholder={description ? stripHtml(description).slice(0, 155) : "Mô tả mặc định của website..."}
+            placeholder={fallbackDesc}
             className="min-h-[72px] resize-none text-sm"
           />
         </div>
 
         {/* 3. SEO Keywords */}
         <div className="space-y-1.5">
-          <Label htmlFor="seo_keywords" className="text-xs font-semibold text-foreground/80">
+          <Label htmlFor="cat_seo_keywords" className="text-xs font-semibold text-foreground/80">
             SEO Keywords
           </Label>
           <Input
-            id="seo_keywords"
+            id="cat_seo_keywords"
             value={seoKeywords}
+            disabled={disabled}
             onChange={(e) => onChange('seo_keywords', e.target.value)}
-            placeholder={name ? `${name}, Trường Kỹ thuật và Công nghệ...` : "từ khóa 1, từ khóa 2..."}
+            placeholder={seoResolved?.seo_keywords || (name ? `${name}, Trường Kỹ thuật và Công nghệ...` : "từ khóa 1, từ khóa 2...")}
             className="h-9 text-sm"
           />
         </div>
@@ -282,14 +318,15 @@ export function CategorySEOSection({
         >
           {/* Canonical URL */}
           <div className="space-y-1.5">
-            <Label htmlFor="seo_canonical" className="text-xs font-semibold text-foreground/80">
+            <Label htmlFor="cat_seo_canonical" className="text-xs font-semibold text-foreground/80">
               Canonical URL
             </Label>
             <Input
-              id="seo_canonical"
+              id="cat_seo_canonical"
               value={seoCanonical}
+              disabled={disabled}
               onChange={(e) => onChange('seo_canonical', e.target.value)}
-              placeholder="https://example.com/chuyen-muc-goc"
+              placeholder={seoResolved?.seo_canonical || "https://example.com/chuyen-muc-goc"}
               className="h-9 text-sm"
             />
             <p className="text-[10px] text-muted-foreground/70">
@@ -303,8 +340,9 @@ export function CategorySEOSection({
               Robots Meta
             </Label>
             <Select
-              value={seoRobots || 'index, follow'}
+              value={seoRobots || seoResolved?.seo_robots || 'index, follow'}
               onValueChange={(val) => onChange('seo_robots', val)}
+              disabled={disabled}
             >
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue />
@@ -327,24 +365,26 @@ export function CategorySEOSection({
             
             <div className="flex gap-4 items-start">
               {/* Box Upload */}
-              <div className="relative border border-border/80 rounded-lg aspect-video w-[160px] bg-muted/20 flex flex-col items-center justify-center overflow-hidden hover:border-primary/50 transition-colors shrink-0">
+              <div className="relative border border-border/80 rounded-lg aspect-video w-[160px] bg-muted/20 flex flex-col items-center justify-center overflow-hidden hover:border-primary/50 transition-colors group">
                 {ogImageUrl ? (
                   <>
                     <img src={ogImageUrl} alt="OG Image" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="absolute top-1 right-1 bg-black/60 hover:bg-destructive p-1 rounded text-white transition-colors"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                    {!disabled && (
+                      <button
+                        type="button"
+                        onClick={handleOgImageRemove}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-destructive p-1 rounded text-white transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
                   </>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => ogInputRef.current?.click()}
+                    onClick={() => !disabled && ogInputRef.current?.click()}
                     className="flex flex-col items-center justify-center p-2 text-center cursor-pointer text-[10px] text-muted-foreground"
-                    disabled={isUploadingOg}
+                    disabled={isUploadingOg || disabled}
                   >
                     {isUploadingOg ? (
                       <Loader2 className="h-4 w-4 animate-spin mb-1 text-primary" />
@@ -359,17 +399,17 @@ export function CategorySEOSection({
               </div>
 
               {/* Status & Fallback Info */}
-              <div className="text-[11px] text-muted-foreground space-y-1">
+              <div className="text-[11px] text-muted-foreground space-y-1 flex-1 min-w-0">
                 {ogImageUrl ? (
                   <p className="text-green-600 font-medium">✓ Đang sử dụng ảnh Open Graph tùy chỉnh.</p>
                 ) : (
-                  thumbnailUrl ? (
+                  displayFallbackOgUrl ? (
                     <div className="space-y-1">
-                      <p className="text-blue-600 font-medium">ℹ Chưa chọn ảnh SEO.</p>
-                      <p>Hệ thống sẽ **tự động sử dụng ảnh đại diện** của danh mục làm ảnh Open Graph hiển thị trên Facebook/Zalo.</p>
-                      <div className="flex items-center gap-1.5 mt-1 border rounded p-1 bg-muted/10 w-fit">
-                        <img src={thumbnailUrl} alt="Thumbnail Fallback" className="w-8 h-8 object-cover rounded" />
-                        <span className="text-[9px] opacity-75">Ảnh đại diện làm fallback</span>
+                      <p className="text-blue-600 font-semibold">ℹ Chưa chọn ảnh SEO tùy chỉnh.</p>
+                      <p className="text-[10px] leading-relaxed">Hệ thống sẽ **tự động sử dụng ảnh gợi ý** làm ảnh hiển thị trên mạng xã hội:</p>
+                      <div className="flex items-center gap-1.5 mt-1 border rounded p-1 bg-muted/10 w-fit max-w-full">
+                        <img src={displayFallbackOgUrl} alt="Fallback SEO Image" className="w-16 h-10 object-cover rounded shrink-0 border" />
+                        <span className="text-[9px] opacity-75 truncate">Ảnh mặc định (resolved)</span>
                       </div>
                     </div>
                   ) : (
@@ -384,7 +424,7 @@ export function CategorySEOSection({
               ref={ogInputRef}
               accept="image/*"
               className="hidden"
-              onChange={handleImageUpload}
+              onChange={handleOgImageUpload}
             />
           </div>
         </div>

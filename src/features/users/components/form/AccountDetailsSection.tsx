@@ -23,6 +23,7 @@ interface AccountDetailsSectionProps {
   isCheckingEmail: boolean
   usernameError?: string | null
   isCheckingUsername?: boolean
+  disabled?: boolean
 }
 
 export function AccountDetailsSection({
@@ -43,6 +44,7 @@ export function AccountDetailsSection({
   isCheckingEmail,
   usernameError = null,
   isCheckingUsername = false,
+  disabled = false,
 }: AccountDetailsSectionProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -63,7 +65,7 @@ export function AccountDetailsSection({
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                disabled={isEditMode}
+                disabled={isEditMode || disabled}
                 placeholder="Ví dụ: hoang_editor"
                 className={cn(
                   "pr-9",
@@ -88,7 +90,7 @@ export function AccountDetailsSection({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isEditMode}
+                disabled={isEditMode || disabled}
                 placeholder="hoang.editor@university.edu.vn"
                 className={cn(
                   "pr-9",
@@ -114,7 +116,8 @@ export function AccountDetailsSection({
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword?.(e.target.value)}
+                    disabled={disabled}
                     placeholder="Mật khẩu bảo mật..."
                     className="pr-9"
                     required
@@ -135,7 +138,8 @@ export function AccountDetailsSection({
                   <Input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => setConfirmPassword?.(e.target.value)}
+                    disabled={disabled}
                     placeholder="Nhập lại mật khẩu..."
                     className="pr-9"
                     required
@@ -158,6 +162,7 @@ export function AccountDetailsSection({
             <Input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              disabled={disabled}
               placeholder="Ví dụ: Nguyễn Minh Hoàng"
               required
             />
@@ -169,6 +174,7 @@ export function AccountDetailsSection({
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              disabled={disabled}
               placeholder="Ví dụ: 0912345678"
             />
           </div>

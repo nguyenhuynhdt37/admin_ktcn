@@ -54,15 +54,13 @@ function TreeNode({
         className={cn(
           'flex items-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors',
           isSelected && 'bg-primary/10 text-primary font-medium',
-          !isActive && 'opacity-50 cursor-not-allowed',
-          isActive && !isSelected && 'hover:bg-muted'
+          node.status !== 'ACTIVE' && 'opacity-70',
+          !isSelected && 'hover:bg-muted'
         )}
         style={{ paddingLeft: `${level * 20 + 8}px` }}
         onClick={() => {
-          if (isActive) {
-            // Click vào mục đang chọn thì bỏ chọn (chuyển về null)
-            onSelect(isSelected ? null : node.id)
-          }
+          // Click vào mục đang chọn thì bỏ chọn (chuyển về null)
+          onSelect(isSelected ? null : node.id)
         }}
       >
         {hasChildren ? (
@@ -86,11 +84,6 @@ function TreeNode({
         <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />
         <span className="flex-1 truncate">{node.name}</span>
 
-        {!isActive && (
-          <Badge variant="outline" className="text-[10px] px-1 py-0 text-destructive border-destructive/30">
-            {node.status}
-          </Badge>
-        )}
         {isSelected && <Check className="w-4 h-4 shrink-0 text-primary" />}
       </div>
 

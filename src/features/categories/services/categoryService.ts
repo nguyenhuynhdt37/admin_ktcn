@@ -48,4 +48,15 @@ export const categoryService = {
     const response = await httpClient.put('/categories/reorder', payload)
     return response.data
   },
+
+  /** Kiểm tra trùng lặp slug và lấy gợi ý */
+  checkSlug: async (slug: string, excludeId?: string | null): Promise<{ exists: boolean; suggested_slug: string }> => {
+    const response = await httpClient.get('/categories/check-slug', {
+      params: {
+        slug,
+        exclude_id: excludeId || undefined,
+      },
+    })
+    return response.data
+  },
 }

@@ -5,10 +5,7 @@ export interface User {
   username: string
   email: string
   is_active: boolean
-  role: string
-  permissions: string[]
 }
-
 
 interface AuthState {
   user: User | null

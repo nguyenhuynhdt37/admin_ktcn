@@ -87,7 +87,7 @@ httpClient.interceptors.response.use(
           const refreshResponse = await axios.post(
             `${env.VITE_API_URL}/auth/refresh`,
             {},
-            { withCredentials: true }
+            { withCredentials: true, timeout: 10000 }
           )
           const { access_token } = refreshResponse.data
 

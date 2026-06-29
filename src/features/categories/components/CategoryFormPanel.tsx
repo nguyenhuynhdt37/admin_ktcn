@@ -8,17 +8,11 @@ import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
 import { Switch } from '@/shared/components/ui/switch'
 import { httpClient } from '@/services/http/client'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select'
+import { cn } from '../../../lib/utils'
 import { categoryService } from '../services/categoryService'
 import { CategorySEOSection } from './CategorySEOSection'
-import { CategoryTreeSelect } from './CategoryTreeSelect'
 import type { CategoryStatus } from '../types'
+import { useAuth } from '@/app/providers/AuthProvider'
 
 interface CategoryFormPanelProps {
   selectedCategoryId: string
@@ -63,6 +57,9 @@ export function CategoryFormPanel({
   onClose,
   refetchTree,
 }: CategoryFormPanelProps) {
+  const { hasPermission } = useAuth()
+  const canUpdate = hasPermission('category.update')
+
   const queryClient = useQueryClient()
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
 
@@ -81,7 +78,7 @@ export function CategoryFormPanel({
         slug: categoryDetail.slug || '',
         description: categoryDetail.description || '',
         parent_id: categoryDetail.parent_id,
-        status: (categoryDetail.status as CategoryStatus) || 'ACTIVE',
+        status: ((categoryDetail.status || 'ACTIVE').toUpperCase() as CategoryStatus) || 'ACTIVE',
         is_visible: categoryDetail.is_visible !== false,
         thumbnail_id: categoryDetail.thumbnail_id || null,
         seo_title: categoryDetail.seo_title || '',
@@ -152,6 +149,47 @@ export function CategoryFormPanel({
     toast.success('Đã gỡ bỏ hình ảnh đại diện.')
   }
 
+  // ─── DEBOUNCE CHECK SLUG REALTIME ───
+  const [slugCheck, setSlugCheck] = useState<{
+    isChecking: boolean
+    exists: boolean
+    suggested: string | null
+  }>({
+    isChecking: false,
+    exists: false,
+    suggested: null,
+  })
+
+  useEffect(() => {
+    if (!form.slug || form.slug.trim() === '') {
+      setSlugCheck({ isChecking: false, exists: false, suggested: null })
+      return
+    }
+
+    // Nếu slug trùng với slug hiện tại của danh mục đang chỉnh sửa thì không báo trùng
+    if (categoryDetail && form.slug === categoryDetail.slug) {
+      setSlugCheck({ isChecking: false, exists: false, suggested: null })
+      return
+    }
+
+    setSlugCheck((prev) => ({ ...prev, isChecking: true }))
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await categoryService.checkSlug(form.slug, selectedCategoryId)
+        setSlugCheck({
+          isChecking: false,
+          exists: res.exists,
+          suggested: res.exists ? res.suggested_slug : null,
+        })
+      } catch {
+        setSlugCheck({ isChecking: false, exists: false, suggested: null })
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [form.slug, selectedCategoryId, categoryDetail])
+
   // Xử lý lỗi API
   const handleApiError = (error: any, defaultMsg: string) => {
     const errorCode = error?.response?.data?.error_code
@@ -196,6 +234,10 @@ export function CategoryFormPanel({
     e.preventDefault()
     if (!form.name.trim()) {
       toast.error('Vui lòng nhập tên danh mục.')
+      return
+    }
+    if (!canUpdate) {
+      toast.error('Bạn không có quyền cập nhật danh mục.')
       return
     }
     updateMutation.mutate()
@@ -248,8 +290,9 @@ export function CategoryFormPanel({
             id="cat_name"
             value={form.name}
             onChange={(e) => handleFieldChange('name', e.target.value)}
-            placeholder="VD: Đào tạo Sau Đại học"
-            className="h-9 text-sm"
+            placeholder="VD: Tin tức nổi bật"
+            disabled={!canUpdate}
+            className="h-9"
           />
         </div>
 
@@ -258,13 +301,41 @@ export function CategoryFormPanel({
           <Label htmlFor="cat_slug" className="text-xs font-semibold text-foreground/80">
             Slug (URL)
           </Label>
-          <Input
-            id="cat_slug"
-            value={form.slug}
-            onChange={(e) => handleFieldChange('slug', e.target.value)}
-            placeholder="dao-tao-sau-dai-hoc"
-            className="h-9 text-sm font-mono"
-          />
+          <div className="relative">
+            <Input
+              id="cat_slug"
+              value={form.slug}
+              onChange={(e) => handleFieldChange('slug', e.target.value)}
+              placeholder="tin-tuc-noi-bat"
+              disabled={!canUpdate}
+              className={cn(
+                "h-9 text-sm font-mono pr-8",
+                slugCheck.exists && "border-amber-500 focus-visible:ring-amber-500 bg-amber-500/5 text-amber-900"
+              )}
+            />
+            {slugCheck.isChecking && (
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          {slugCheck.exists && (
+            <div className="text-[11px] text-amber-700 bg-amber-50/50 p-2 rounded border border-amber-200/60 mt-1 space-y-1.5 leading-normal">
+              <p className="flex items-center gap-1 font-semibold">
+                ⚠️ Slug này đã tồn tại trong hệ thống (kể cả đã xóa mềm).
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((prev) => ({ ...prev, slug: slugCheck.suggested || '' }))
+                  setSlugCheck({ isChecking: false, exists: false, suggested: null })
+                }}
+                className="text-primary hover:underline block text-left font-semibold cursor-pointer"
+              >
+                👉 Sử dụng gợi ý: <span className="font-mono bg-primary/10 px-1 py-0.5 rounded text-xs">{slugCheck.suggested}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Mô tả */}
@@ -276,40 +347,51 @@ export function CategoryFormPanel({
             id="cat_desc"
             value={form.description}
             onChange={(e) => handleFieldChange('description', e.target.value)}
-            placeholder="Mô tả danh mục..."
-            className="min-h-[72px] resize-none text-sm"
+            placeholder="Mô tả ngắn gọn về danh mục này..."
+            disabled={!canUpdate}
+            className="min-h-[80px] resize-none text-sm"
           />
         </div>
 
         {/* Ảnh đại diện (đã dời ra khỏi SEO) */}
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-foreground/80">Ảnh đại diện</Label>
-          <div className="relative border border-border/80 rounded-lg aspect-video max-w-[240px] bg-muted/20 flex flex-col items-center justify-center overflow-hidden hover:border-primary/50 transition-colors">
+          <div className="relative border border-border/80 rounded-lg aspect-video max-w-[240px] bg-muted/20 flex flex-col items-center justify-center overflow-hidden hover:border-primary/50 transition-colors group">
             {thumbnailUrl ? (
               <>
                 <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={handleThumbnailRemove}
-                  className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-destructive p-1.5 rounded text-white transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {canUpdate && (
+                  <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm gap-2">
+                    <span className="text-xs font-semibold">Thay đổi ảnh</span>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 text-[10px] px-2.5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleThumbnailRemove()
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" /> Gỡ ảnh
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
               <button
                 type="button"
                 onClick={() => thumbnailInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-4 text-center cursor-pointer text-xs text-muted-foreground"
-                disabled={isUploadingThumbnail}
+                className="flex flex-col items-center justify-center p-4 text-center cursor-pointer text-xs text-muted-foreground w-full h-full"
+                disabled={isUploadingThumbnail || !canUpdate}
               >
                 {isUploadingThumbnail ? (
                   <Loader2 className="h-5 w-5 animate-spin mb-1.5 text-primary" />
                 ) : (
-                  <>
-                    <Camera className="h-5 w-5 mb-1.5 text-muted-foreground/75" />
-                    Tải ảnh đại diện lên
-                  </>
+                  <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
+                    <Camera className="h-6 w-6" />
+                    <span className="text-xs font-medium">Tải ảnh lên</span>
+                  </div>
                 )}
               </button>
             )}
@@ -323,35 +405,23 @@ export function CategoryFormPanel({
           />
         </div>
 
-        {/* Danh mục cha */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-foreground/80">
-            Danh mục cha
-          </Label>
-          <CategoryTreeSelect
-            value={form.parent_id}
-            onChange={(id) => handleFieldChange('parent_id', id)}
-          />
-        </div>
 
         {/* Trạng thái */}
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-foreground/80">
+          <Label htmlFor="cat_status" className="text-xs font-semibold text-foreground/80">
             Trạng thái
           </Label>
-          <Select
+          <select
+            id="cat_status"
             value={form.status}
-            onValueChange={(val) => handleFieldChange('status', val as CategoryStatus)}
+            disabled={!canUpdate}
+            onChange={(e) => handleFieldChange('status', e.target.value as CategoryStatus)}
+            className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
           >
-            <SelectTrigger className="h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ACTIVE">Hoạt động</SelectItem>
-              <SelectItem value="DRAFT">Nháp</SelectItem>
-              <SelectItem value="INACTIVE">Không hoạt động</SelectItem>
-            </SelectContent>
-          </Select>
+            <option value="ACTIVE" className="bg-popover text-popover-foreground">Hoạt động</option>
+            <option value="DRAFT" className="bg-popover text-popover-foreground">Nháp</option>
+            <option value="INACTIVE" className="bg-popover text-popover-foreground">Không hoạt động</option>
+          </select>
         </div>
 
         {/* Hiển thị */}
@@ -362,6 +432,7 @@ export function CategoryFormPanel({
           <Switch
             id="cat_visible"
             checked={form.is_visible}
+            disabled={!canUpdate}
             onCheckedChange={(checked) => handleFieldChange('is_visible', checked)}
           />
         </div>
@@ -377,28 +448,32 @@ export function CategoryFormPanel({
           seoRobots={form.seo_robots}
           seoOgImageId={form.seo_og_image_id}
           thumbnailUrl={thumbnailUrl}
+          seoResolved={(categoryDetail as any)?.seo_resolved}
           onChange={handleFieldChange}
+          disabled={!canUpdate}
         />
       </form>
 
       {/* Footer cố định không bị cuộn */}
       <div className="p-4 border-t bg-card shrink-0 flex gap-2 w-full justify-end">
         <Button type="button" variant="outline" onClick={onClose} className="h-9 text-xs">
-          Hủy
+          Đóng
         </Button>
-        <Button
-          type="button"
-          onClick={handleSubmit}
-          disabled={updateMutation.isPending}
-          className="h-9 text-xs"
-        >
-          {updateMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Save className="mr-1.5 h-3.5 w-3.5" />
-          )}
-          Lưu cấu hình
-        </Button>
+        {canUpdate && (
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={updateMutation.isPending}
+            className="h-9 text-xs"
+          >
+            {updateMutation.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Lưu cấu hình
+          </Button>
+        )}
       </div>
     </div>
   )

@@ -22,6 +22,7 @@ import {
 import { menusService } from '../services/menusService'
 import { CategoryTreeSelect } from './CategoryTreeSelect'
 import type { MenuItemPayload } from '../types'
+import { useAuth } from '@/app/providers/AuthProvider'
 
 // Helper chuyển đổi tên icon sang PascalCase để khớp thư viện Lucide
 function toPascalCase(str: string): string {
@@ -66,6 +67,9 @@ export function MenuItemConfigPanel({
   onClose,
   refetchTree,
 }: MenuItemConfigPanelProps) {
+  const { hasPermission } = useAuth()
+  const canUpdate = hasPermission('menu.update')
+
   const queryClient = useQueryClient()
 
   // 1. Query lấy thông tin chi tiết của menu item
@@ -192,9 +196,13 @@ export function MenuItemConfigPanel({
     },
   })
 
-  // Xử lý gửi form cập nhật
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  // 3. Xử lý lưu
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!canUpdate) {
+      toast.error('Bạn không có quyền cập nhật menu.')
+      return
+    }
     if (!title.trim()) {
       toast.error('Vui lòng nhập tiêu đề mục menu.')
       return
@@ -259,8 +267,9 @@ export function MenuItemConfigPanel({
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ví dụ: Giới thiệu chung"
-            className="h-9 text-sm"
+            disabled={!canUpdate}
+            placeholder="VD: Giới thiệu"
+            className="font-medium bg-background border-border/80"
           />
         </div>
 
@@ -269,7 +278,15 @@ export function MenuItemConfigPanel({
           <Label htmlFor="targetType" className="text-xs font-semibold text-foreground/80">
             Loại liên kết
           </Label>
-          <Select value={targetType} onValueChange={setTargetType}>
+          <Select
+            value={targetType}
+            disabled={!canUpdate}
+            onValueChange={(val) => {
+              setTargetType(val)
+              setTargetId('')
+              setExternalUrl('')
+            }}
+          >
             <SelectTrigger id="targetType" className="h-9 text-sm">
               <SelectValue placeholder="Chọn loại liên kết" />
             </SelectTrigger>
@@ -294,8 +311,9 @@ export function MenuItemConfigPanel({
               id="externalUrl"
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="https://example.com/page"
-              className="h-9 text-sm"
+              placeholder="https://example.com/chuyen-muc-khac"
+              disabled={!canUpdate}
+              className="bg-background font-mono text-[13px] text-blue-600 dark:text-blue-400"
             />
           </div>
         )}
@@ -308,6 +326,7 @@ export function MenuItemConfigPanel({
             <CategoryTreeSelect
               value={targetId || null}
               onChange={(id) => setTargetId(id)}
+              disabled={!canUpdate}
             />
           </div>
         )}
@@ -317,9 +336,9 @@ export function MenuItemConfigPanel({
             <Label htmlFor="targetId" className="text-xs font-semibold text-foreground/80">
               Chọn bài viết liên kết <span className="text-destructive">*</span>
             </Label>
-            <Select value={targetId} onValueChange={setTargetId}>
-              <SelectTrigger id="targetId" className="h-9 text-sm">
-                <SelectValue placeholder="Chọn bài viết" />
+            <Select value={targetId} onValueChange={setTargetId} disabled={!canUpdate}>
+              <SelectTrigger id="targetId" className="h-9 text-sm bg-background">
+                <SelectValue placeholder="Chọn bài viết cụ thể" />
               </SelectTrigger>
               <SelectContent>
                 {MOCK_ARTICLES.map((art) => (
@@ -337,9 +356,9 @@ export function MenuItemConfigPanel({
             <Label htmlFor="targetId" className="text-xs font-semibold text-foreground/80">
               Chọn trang tĩnh liên kết <span className="text-destructive">*</span>
             </Label>
-            <Select value={targetId} onValueChange={setTargetId}>
-              <SelectTrigger id="targetId" className="h-9 text-sm">
-                <SelectValue placeholder="Chọn trang tĩnh" />
+            <Select value={targetId} onValueChange={setTargetId} disabled={!canUpdate}>
+              <SelectTrigger id="targetId" className="h-9 text-sm bg-background">
+                <SelectValue placeholder="Chọn trang giới thiệu" />
               </SelectTrigger>
               <SelectContent>
                 {MOCK_PAGES.map((pg) => (
@@ -361,7 +380,8 @@ export function MenuItemConfigPanel({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full h-10 justify-between px-3 text-sm font-normal cursor-pointer bg-card hover:bg-muted"
+                className="w-full h-10 justify-between px-3 text-sm font-normal cursor-pointer bg-background hover:bg-muted"
+                disabled={!canUpdate}
               >
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted border border-dashed text-muted-foreground">
@@ -470,6 +490,7 @@ export function MenuItemConfigPanel({
             <Switch
               id="openInNewTab"
               checked={openInNewTab}
+              disabled={!canUpdate}
               onCheckedChange={setOpenInNewTab}
             />
           </div>
@@ -488,6 +509,7 @@ export function MenuItemConfigPanel({
             <Switch
               id="isVisible"
               checked={isVisible}
+              disabled={!canUpdate}
               onCheckedChange={setIsVisible}
             />
           </div>
@@ -504,16 +526,18 @@ export function MenuItemConfigPanel({
         >
           Hủy bỏ
         </Button>
-        <Button
-          type="submit"
-          size="sm"
-          onClick={handleSubmit}
-          disabled={updateMutation.isPending}
-          className="cursor-pointer shadow-sm flex items-center gap-1.5"
-        >
-          <Save className="h-4 w-4" />
-          {updateMutation.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}
-        </Button>
+        {canUpdate && (
+          <Button
+            type="submit"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={updateMutation.isPending}
+            className="cursor-pointer shadow-sm flex items-center gap-1.5"
+          >
+            <Save className="h-4 w-4" />
+            {updateMutation.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}
+          </Button>
+        )}
       </div>
     </div>
   )

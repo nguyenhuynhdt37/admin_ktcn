@@ -2,20 +2,19 @@ import { createBrowserRouter, Navigate } from 'react-router'
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { AuthLayout } from '@/app/layouts/AuthLayout'
 import { ProtectedRoute } from './ProtectedRoute'
-import { PermissionRoute } from './PermissionRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage'
 import { UsersPage } from '@/features/users/pages/UsersPage'
 import { UserCreatePage } from '@/features/users/pages/UserCreatePage'
 import { UserEditPage } from '@/features/users/pages/UserEditPage'
 import { UserActivityPage } from '@/features/users/pages/UserActivityPage'
-import { RolesPage } from '@/features/roles/pages/RolesPage'
 import { AuditLogsPage } from '@/features/audit-logs/pages/AuditLogsPage'
-import { UiSandboxPage } from '@/features/sandbox/pages/UiSandboxPage'
-import { EditorTestPage } from '@/features/sandbox/pages/EditorTestPage'
 import { MenusPage } from '@/features/menus/pages/MenusPage'
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
-import { AiSettingsPage } from '@/features/ai-settings/pages/AiSettingsPage'
+
+import { ArticlesPage } from '@/features/articles/pages/ArticlesPage'
+import ArticleFormPage from '@/features/articles/pages/ArticleFormPage'
+import { ArticleDraftsPage } from '@/features/articles/pages/ArticleDraftsPage'
 import { Button } from '@/shared/components/ui/button'
 import { Link } from 'react-router'
 
@@ -62,92 +61,49 @@ export const router = createBrowserRouter([
       },
       {
         path: 'categories',
-        element: (
-          <PermissionRoute permission="category.view">
-            <CategoriesPage />
-          </PermissionRoute>
-        ),
+        element: <CategoriesPage />,
+      },
+      {
+        path: 'articles',
+        element: <ArticlesPage />,
+      },
+      {
+        path: 'articles/create',
+        element: <ArticleFormPage />,
+      },
+      {
+        path: 'articles/:id/edit',
+        element: <ArticleFormPage />,
+      },
+      {
+        path: 'articles/drafts',
+        element: <ArticleDraftsPage />,
       },
       {
         path: 'users',
-        element: (
-          <PermissionRoute permission="user.view">
-            <UsersPage />
-          </PermissionRoute>
-        ),
+        element: <UsersPage />,
       },
       {
         path: 'users/create',
-        element: (
-          <PermissionRoute permission="user.create">
-            <UserCreatePage />
-          </PermissionRoute>
-        ),
+        element: <UserCreatePage />,
       },
       {
         path: 'users/:id/edit',
-        element: (
-          <PermissionRoute permission="user.update">
-            <UserEditPage />
-          </PermissionRoute>
-        ),
+        element: <UserEditPage />,
       },
       {
         path: 'users/:id/activity',
-        element: (
-          <PermissionRoute permission="user.view">
-            <UserActivityPage />
-          </PermissionRoute>
-        ),
-      },
-      {
-        path: 'roles',
-        element: (
-          <PermissionRoute permission="role.view">
-            <RolesPage />
-          </PermissionRoute>
-        ),
-      },
-      {
-        path: 'permissions',
-        element: (
-          <PermissionRoute permission="permission.view">
-            <RolesPage />
-          </PermissionRoute>
-        ),
+        element: <UserActivityPage />,
       },
       {
         path: 'audit-logs',
-        element: (
-          <PermissionRoute permission="audit.view">
-            <AuditLogsPage />
-          </PermissionRoute>
-        ),
+        element: <AuditLogsPage />,
       },
       {
         path: 'menus',
-        element: (
-          <PermissionRoute permission="menu.view">
-            <MenusPage />
-          </PermissionRoute>
-        ),
+        element: <MenusPage />,
       },
-      {
-        path: 'settings/ai',
-        element: (
-          <PermissionRoute permission="ai.view">
-            <AiSettingsPage />
-          </PermissionRoute>
-        ),
-      },
-      {
-        path: 'ui-sandbox',
-        element: <UiSandboxPage />,
-      },
-      {
-        path: 'editor-test',
-        element: <EditorTestPage />,
-      },
+
       {
         path: '*',
         element: <NotFoundPage />,
@@ -155,4 +111,3 @@ export const router = createBrowserRouter([
     ],
   },
 ])
-

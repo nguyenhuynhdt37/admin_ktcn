@@ -6,7 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import type { ColumnDef, SortingState } from '@tanstack/react-table'
+import type { ColumnDef, SortingState, RowSelectionState, OnChangeFn } from '@tanstack/react-table'
 
 import {
   Table,
@@ -18,6 +18,7 @@ import {
 } from '@/shared/components/ui/table'
 
 import { Button } from '@/shared/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 interface DataTableProps<TData, TValue> {
@@ -30,6 +31,11 @@ interface DataTableProps<TData, TValue> {
   onPageChange?: (index: number) => void
   onRowClick?: (row: TData) => void
   isLoading?: boolean
+  sorting?: SortingState
+  onSortingChange?: (sorting: SortingState) => void
+  rowSelection?: RowSelectionState
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -42,20 +48,32 @@ export function DataTable<TData, TValue>({
   onPageChange,
   onRowClick,
   isLoading = false,
+  sorting,
+  onSortingChange,
+  rowSelection,
+  onRowSelectionChange,
+  onPageSizeChange,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [internalSorting, setInternalSorting] = useState<SortingState>([])
 
   const isServerSide = pageCount !== undefined && pageIndex !== undefined && onPageChange !== undefined
+  const isServerSort = sorting !== undefined && onSortingChange !== undefined
+  
+  const currentSorting = isServerSort ? sorting : internalSorting
+  const handleSortingChange = isServerSort ? onSortingChange : setInternalSorting
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: isServerSide ? undefined : getPaginationRowModel(),
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: handleSortingChange as any,
+    getSortedRowModel: isServerSort ? undefined : getSortedRowModel(),
+    onRowSelectionChange,
+    enableRowSelection: true,
     state: {
-      sorting,
+      sorting: currentSorting,
+      ...(rowSelection !== undefined && { rowSelection }),
     },
     initialState: {
       pagination: {
@@ -122,8 +140,8 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between px-2">
-        <div className="flex-1 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
+        <div className="flex-1 text-sm text-muted-foreground whitespace-nowrap">
           Hiển thị{' '}
           <span className="font-medium">
             {recordsTotal === 0 ? 0 : currentPage * pageSize + 1}
@@ -136,9 +154,35 @@ export function DataTable<TData, TValue>({
             )}
           </span>{' '}
           trong tổng số <span className="font-medium">{recordsTotal}</span> bản ghi
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <span className="ml-2 font-medium text-primary">
+              (Đã chọn {table.getFilteredSelectedRowModel().rows.length})
+            </span>
+          )}
         </div>
-        <div className="flex items-center space-x-6 lg:space-x-8">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 overflow-x-auto pb-1 sm:pb-0">
+          {onPageSizeChange && (
+            <div className="flex items-center space-x-2">
+              <p className="text-sm font-medium whitespace-nowrap">Số dòng</p>
+              <Select
+                value={`${pageSize}`}
+                onValueChange={(value) => onPageSizeChange(Number(value))}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 20, 50, 100].map((size) => (
+                    <SelectItem key={size} value={`${size}`}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          <div className="flex items-center space-x-2 shrink-0">
             <Button
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"

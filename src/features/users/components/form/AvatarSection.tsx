@@ -10,6 +10,7 @@ interface AvatarSectionProps {
   setIsUploading: (uploading: boolean) => void
   setAvatarId: (id: string | null) => void
   setAvatarUrl: (url: string | null) => void
+  disabled?: boolean
 }
 
 export function AvatarSection({
@@ -18,6 +19,7 @@ export function AvatarSection({
   setIsUploading,
   setAvatarId,
   setAvatarUrl,
+  disabled,
 }: AvatarSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -49,21 +51,23 @@ export function AvatarSection({
             <User className="size-12 text-muted-foreground/45" />
           )}
           
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-[10px] font-medium"
-          >
-            {isUploading ? (
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-[10px] font-medium"
+            >
+              {isUploading ? (
               <Loader2 className="size-5 animate-spin" />
             ) : (
               <>
                 <Camera className="size-4 mb-0.5" />
                 Thay đổi
-              </>
-            )}
-          </button>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         <input
