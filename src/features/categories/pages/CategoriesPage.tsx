@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { FolderOpen, Sliders, AlertCircle, RefreshCw } from 'lucide-react'

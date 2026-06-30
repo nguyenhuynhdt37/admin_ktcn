@@ -16,6 +16,8 @@ export interface Category {
   seo_canonical?: string | null
   seo_robots?: string | null
   seo_og_image_id?: string | null
+  is_weekly_schedule: boolean
+  is_locked: boolean
   created_at: string
   updated_at: string
 }
@@ -36,6 +38,8 @@ export interface CategoryTreeNode {
   seo_canonical?: string | null
   seo_robots?: string | null
   seo_og_image_id?: string | null
+  is_weekly_schedule: boolean
+  is_locked: boolean
   children: CategoryTreeNode[]
 }
 
@@ -54,6 +58,7 @@ export interface CategoryCreatePayload {
   seo_canonical?: string | null
   seo_robots?: string | null
   seo_og_image_id?: string | null
+  is_weekly_schedule?: boolean
 }
 
 export interface CategoryUpdatePayload {
@@ -71,6 +76,7 @@ export interface CategoryUpdatePayload {
   seo_canonical?: string | null
   seo_robots?: string | null
   seo_og_image_id?: string | null
+  is_weekly_schedule?: boolean
 }
 
 export interface CategoryReorderItem {
@@ -95,6 +101,8 @@ export interface FlatCategoryNode {
   is_visible: boolean
   depth: number
   children_count: number
+  is_weekly_schedule: boolean
+  is_locked: boolean
   isGhost?: boolean
   isPlaceholder?: boolean
   isValid?: boolean

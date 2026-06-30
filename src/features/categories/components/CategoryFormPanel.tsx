@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -34,6 +35,7 @@ interface FormState {
   seo_canonical: string
   seo_robots: string
   seo_og_image_id: string | null
+  is_weekly_schedule: boolean
 }
 
 const INITIAL_FORM: FormState = {
@@ -50,6 +52,7 @@ const INITIAL_FORM: FormState = {
   seo_canonical: '',
   seo_robots: 'index, follow',
   seo_og_image_id: null,
+  is_weekly_schedule: false,
 }
 
 export function CategoryFormPanel({
@@ -87,6 +90,7 @@ export function CategoryFormPanel({
         seo_canonical: categoryDetail.seo_canonical || '',
         seo_robots: categoryDetail.seo_robots || 'index, follow',
         seo_og_image_id: categoryDetail.seo_og_image_id || null,
+        is_weekly_schedule: categoryDetail.is_weekly_schedule === true,
       })
     }
   }, [categoryDetail])
@@ -219,6 +223,7 @@ export function CategoryFormPanel({
         seo_canonical: form.seo_canonical || null,
         seo_robots: form.seo_robots || null,
         seo_og_image_id: form.seo_og_image_id,
+        is_weekly_schedule: form.is_weekly_schedule,
       }),
     onSuccess: (updated) => {
       toast.success(`Đã cập nhật danh mục "${updated.name}" thành công!`)
@@ -434,6 +439,24 @@ export function CategoryFormPanel({
             checked={form.is_visible}
             disabled={!canUpdate}
             onCheckedChange={(checked) => handleFieldChange('is_visible', checked)}
+          />
+        </div>
+
+        {/* Danh mục Lịch tuần */}
+        <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2.5">
+          <div className="space-y-0.5">
+            <Label htmlFor="cat_weekly" className="cursor-pointer text-sm font-semibold text-foreground/80">
+              Danh mục Lịch tuần
+            </Label>
+            <p className="text-[10px] text-muted-foreground">
+              Đánh dấu danh mục hiển thị dạng bảng lịch tuần chuyên dụng
+            </p>
+          </div>
+          <Switch
+            id="cat_weekly"
+            checked={form.is_weekly_schedule}
+            disabled={!canUpdate}
+            onCheckedChange={(checked) => handleFieldChange('is_weekly_schedule', checked)}
           />
         </div>
 

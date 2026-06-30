@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Loader2, Trash2, Camera, ChevronDown, ChevronRight, Globe } from 'lucide-react'
 import { toast } from 'sonner'

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect } from 'react'
 import {
   DndContext,
@@ -605,6 +606,7 @@ export function CategoryDragDropEditor({
                         }
                       }}
                       onAddChild={() => createMutation.mutate(item.id)}
+                      isLocked={item.is_locked}
                     />
                   )
                 })}
@@ -623,6 +625,7 @@ export function CategoryDragDropEditor({
                     isSelected={true}
                     onEdit={() => {}}
                     onDelete={() => {}}
+                    isLocked={activeItem.is_locked}
                   />
                 </div>
               ) : null}

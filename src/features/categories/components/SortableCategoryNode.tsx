@@ -8,6 +8,7 @@ import {
   Folder,
   EyeOff,
   Plus,
+  Lock,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -27,6 +28,7 @@ interface SortableCategoryNodeProps {
   onEdit: () => void
   onDelete: () => void
   onAddChild?: () => void
+  isLocked?: boolean
 }
 
 const STATUS_CONFIG: Record<CategoryStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
@@ -47,6 +49,7 @@ export function SortableCategoryNode({
   onEdit,
   onDelete,
   onAddChild,
+  isLocked = false,
 }: SortableCategoryNodeProps) {
   const {
     attributes,
@@ -124,15 +127,20 @@ export function SortableCategoryNode({
 
           {/* Tiêu đề & badge */}
           <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5">
-            <span
-              onClick={onEdit}
-              className={cn(
-                'text-sm font-medium truncate cursor-pointer hover:text-primary transition-colors',
-                !isVisible && 'text-muted-foreground line-through'
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                onClick={onEdit}
+                className={cn(
+                  'text-sm font-medium truncate cursor-pointer hover:text-primary transition-colors',
+                  !isVisible && 'text-muted-foreground line-through'
+                )}
+              >
+                {title}
+              </span>
+              {isLocked && (
+                <Lock className="h-3.5 w-3.5 text-amber-500 shrink-0" title="Danh mục hệ thống (Khóa xóa)" />
               )}
-            >
-              {title}
-            </span>
+            </div>
             <div className="flex items-center gap-1.5">
               <Badge variant={statusCfg.variant} className="text-[10px] px-1 py-0 h-4.5 font-normal">
                 {statusCfg.label}
@@ -176,7 +184,7 @@ export function SortableCategoryNode({
           </Button>
 
           {/* Nút Xóa */}
-          {canDelete && (
+          {canDelete && !isLocked && (
             <Button
               variant="ghost"
               size="icon"
