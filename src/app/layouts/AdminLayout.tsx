@@ -35,6 +35,7 @@ import {
   Briefcase,
   GraduationCap,
   Image,
+  Languages,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -149,6 +150,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
+    { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
     { type: 'separator' },
     { label: 'Thành viên', href: '/users', icon: Users, permission: null },
     {
