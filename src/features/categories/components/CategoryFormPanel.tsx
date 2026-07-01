@@ -351,19 +351,6 @@ export function CategoryFormPanel({
                 className="scale-90 cursor-pointer"
               />
             </div>
-
-            {/* Locked (System Category) */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Label className="text-xs font-semibold text-foreground/80 cursor-pointer">Khóa hệ thống (Khóa xóa)</Label>
-                <HelpCircle className="h-3 w-3 text-muted-foreground" title="Khóa danh mục này, ngăn không cho xóa để tránh lỗi logic hệ thống" />
-              </div>
-              <Switch
-                checked={form.is_locked}
-                onCheckedChange={(checked) => handleFieldChange('is_locked', checked)}
-                className="scale-90 cursor-pointer"
-              />
-            </div>
           </div>
         </div>
       </form>

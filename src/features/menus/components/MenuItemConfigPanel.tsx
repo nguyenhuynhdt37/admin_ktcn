@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { X, Save, Link as LinkIcon, Eye, EyeOff, Smile, Loader2, Check, ChevronsUpDown, Search } from 'lucide-react'
+import { X, Save, Link as LinkIcon, Eye, EyeOff, Smile, Loader2, Check, ChevronsUpDown, Search, AlertTriangle } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -28,6 +28,8 @@ import { CategoryTreeSelect } from './CategoryTreeSelect'
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import type { MenuItemPayload } from '../types'
 import { useAuth } from '@/app/providers/AuthProvider'
+
+import { useMenuItemConfig } from '../hooks/useMenuItemConfig'
 
 // Helper chuyển đổi tên icon sang PascalCase để khớp thư viện Lucide
 function toPascalCase(str: string): string {
@@ -112,202 +114,41 @@ function MenuItemConfigForm({
   onClose: () => void
   refetchTree: () => void
 }) {
-  const { hasPermission } = useAuth()
-  const canUpdate = hasPermission('menu.update')
-  const queryClient = useQueryClient()
-
-  // Query lấy danh sách icons cấu hình từ Backend
-  const { data: iconCategories } = useQuery({
-    queryKey: ['menu-config-icons'],
-    queryFn: menusService.getCuratedIcons,
+  const {
+    form,
+    activeTab,
+    setActiveTab,
+    isTranslating,
+    title,
+    targetType,
+    targetId,
+    externalUrl,
+    openInNewTab,
+    isVisible,
+    setTargetType,
+    setTargetId,
+    setExternalUrl,
+    setOpenInNewTab,
+    setIsVisible,
+    handleTranslationChange,
+    handleAutoTranslate,
+    articleSearch,
+    setArticleSearch,
+    articlesList,
+    departmentsList,
+    isLoadingArticles,
+    canUpdate,
+    handleSubmit,
+    updateMutation,
+    isFormValid,
+    isTabComplete,
+  } = useMenuItemConfig({
+    menuId,
+    itemId,
+    item,
+    onClose,
+    refetchTree,
   })
-
-  // Khởi tạo state đồng bộ đồng thời 100% từ prop `item`
-  const [title, setTitle] = useState(item.title || '')
-  const [targetType, setTargetType] = useState<string>(item.target_type || 'NONE')
-  const [targetId, setTargetId] = useState(item.target_id || '')
-  const [externalUrl, setExternalUrl] = useState(item.external_url || '')
-  const [icon, setIcon] = useState(item.icon || '')
-  const [openInNewTab, setOpenInNewTab] = useState(item.open_in_new_tab || false)
-  const [isVisible, setIsVisible] = useState(item.is_visible !== false)
-  
-  const [popoverOpen, setPopoverOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-
-  // State tìm kiếm bài viết khởi tạo từ tên bài viết hiện tại (nếu là bài viết)
-  const [articleSearch, setArticleSearch] = useState(() => 
-    item.target_type === 'ARTICLE' && item.target_info ? item.target_info.name || '' : ''
-  )
-  const debouncedArticleSearch = useDebounce(articleSearch, 400)
-
-  // Queries danh sách bài viết & bộ môn
-  const { data: articlesData, isLoading: isLoadingArticles } = useQuery({
-    queryKey: ['menus-search-articles', debouncedArticleSearch],
-    queryFn: () => articleService.list({
-      status: 'PUBLISHED',
-      is_draft: false,
-      page: 1,
-      page_size: 100,
-      search: debouncedArticleSearch || undefined
-    }),
-    enabled: targetType === 'ARTICLE',
-  })
-
-  const { data: departmentsData } = useQuery({
-    queryKey: ['menus-active-departments'],
-    queryFn: () => departmentService.list({
-      is_active: true,
-      page: 1,
-      page_size: 1000
-    }),
-    enabled: targetType === 'DEPARTMENT',
-  })
-
-  // Xử lý options fallback gộp phần tử hiện tại vào đầu danh sách
-  const articlesList = useMemo(() => {
-    const list = [...(articlesData?.items || [])]
-    if (item && item.target_type === 'ARTICLE' && item.target_id && item.target_info) {
-      const hasCurrent = list.some((art) => art.id === item.target_id)
-      if (!hasCurrent) {
-        list.unshift({
-          id: item.target_id,
-          title: item.target_info.name,
-          category: { name: (item.target_info as any).category_name || 'Bài viết' },
-          created_at: (item.target_info as any).created_at || null,
-          author: { full_name: (item.target_info as any).author_name || 'Hệ thống' }
-        } as any)
-      }
-    }
-    return list
-  }, [articlesData, item])
-
-  const departmentsList = useMemo(() => {
-    const list = [...(departmentsData?.items || [])]
-    if (item && item.target_type === 'DEPARTMENT' && item.target_id && item.target_info) {
-      const hasCurrent = list.some((dept) => dept.id === item.target_id)
-      if (!hasCurrent) {
-        list.unshift({
-          id: item.target_id,
-          name: item.target_info.name,
-          code: (item.target_info as any).code || ''
-        } as any)
-      }
-    }
-    return list
-  }, [departmentsData, item])
-
-  // Biểu tượng mở rộng client-side
-  const EXTENDED_ICONS = [
-    { name: 'Trang chủ / Home', code: 'home' },
-    { name: 'Thành viên / User', code: 'user' },
-    { name: 'Cấu hình / Settings', code: 'settings' },
-    { name: 'Liên hệ / Phone', code: 'phone' },
-    { name: 'Thư mục / Folder', code: 'folder' },
-    { name: 'Tệp tin / File', code: 'file' },
-    { name: 'Hình ảnh / Image', code: 'image' },
-    { name: 'Tìm kiếm / Search', code: 'search' },
-    { name: 'Ngôi sao / Star', code: 'star' },
-    { name: 'Trái tim / Heart', code: 'heart' },
-    { name: 'Cảnh báo / Bell', code: 'bell' },
-    { name: 'Bảo mật / Lock', code: 'lock' },
-    { name: 'Bảo vệ / Shield', code: 'shield' },
-    { name: 'Đám mây / Cloud', code: 'cloud' },
-    { name: 'Cơ sở dữ liệu / Database', code: 'database' },
-    { name: 'Máy chủ / Server', code: 'server' },
-    { name: 'Mã code / Code', code: 'code' },
-    { name: 'Thiết bị / Laptop', code: 'laptop' },
-    { name: 'Kết nối / Link', code: 'link' },
-    { name: 'Tải xuống / Download', code: 'download' },
-    { name: 'Tải lên / Upload', code: 'upload' },
-    { name: 'Chia sẻ / Share', code: 'share-2' },
-    { name: 'Giỏ hàng / Cart', code: 'shopping-cart' },
-    { name: 'Thẻ tag / Tag', code: 'tag' },
-    { name: 'Bộ lọc / Filter', code: 'filter' },
-    { name: 'Thời tiết / Sun', code: 'sun' },
-    { name: 'Ban đêm / Moon', code: 'moon' },
-    { name: 'Âm nhạc / Music', code: 'music' },
-    { name: 'Video / Film', code: 'film' },
-    { name: 'Địa cầu / Globe', code: 'globe' },
-    { name: 'Mũi tên / Arrow Right', code: 'arrow-right' },
-    { name: 'Danh sách / List', code: 'list' },
-    { name: 'Bảng biểu / Table', code: 'table' },
-    { name: 'Đồ thị / Activity', code: 'activity' },
-    { name: 'Ví tiền / Wallet', code: 'wallet' },
-    { name: 'Cúp / Trophy', code: 'trophy' },
-    { name: 'Mục tiêu / Target', code: 'target' },
-    { name: 'Chìa khóa / Key', code: 'key' },
-    { name: 'Bóng đèn / Lightbulb', code: 'lightbulb' },
-  ]
-
-  const allCategories = [
-    ...(iconCategories || []),
-    {
-      category: 'Biểu tượng phổ biến khác',
-      icons: EXTENDED_ICONS,
-    },
-  ]
-
-  const filteredCategories = allCategories
-    .map((cat) => {
-      const filteredIcons = cat.icons.filter(
-        (ico) =>
-          ico.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ico.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      return {
-        ...cat,
-        icons: filteredIcons,
-      }
-    })
-    .filter((cat) => cat.icons.length > 0)
-
-  // Mutation cập nhật cấu hình item
-  const updateMutation = useMutation({
-    mutationFn: (payload: Partial<MenuItemPayload>) =>
-      menusService.updateItem(menuId, itemId, payload),
-    onSuccess: () => {
-      toast.success('Đã cập nhật cấu hình mục menu thành công!')
-      queryClient.invalidateQueries({ queryKey: ['menu-item', menuId, itemId] })
-      refetchTree()
-    },
-    onError: (error: any) => {
-      const errorCode = error?.response?.data?.error_code
-      const errorMap: Record<string, string> = {
-        TARGET_CATEGORY_NOT_FOUND: 'Danh mục được chọn không tồn tại.',
-        TARGET_CATEGORY_DELETED: 'Danh mục đã bị xóa. Vui lòng chọn danh mục khác.',
-        TARGET_CATEGORY_NOT_ACTIVE: 'Chỉ cho phép liên kết với danh mục đang hoạt động (ACTIVE).',
-        TARGET_DEPARTMENT_NOT_FOUND: 'Bộ môn được chọn không tồn tại.',
-        TARGET_DEPARTMENT_NOT_ACTIVE: 'Chỉ liên kết với bộ môn đang hoạt động.',
-        TARGET_ARTICLE_NOT_FOUND: 'Bài viết được chọn không tồn tại hoặc chưa xuất bản.',
-      }
-      toast.error(errorMap[errorCode] || 'Không thể cập nhật cấu hình.')
-    },
-  })
-
-  // Xử lý lưu
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (!canUpdate) {
-      toast.error('Bạn không có quyền cập nhật menu.')
-      return
-    }
-    if (!title.trim()) {
-      toast.error('Vui lòng nhập tiêu đề mục menu.')
-      return
-    }
-
-    const payload: Partial<MenuItemPayload> = {
-      title: title.trim(),
-      target_type: targetType === 'NONE' ? null : (targetType as any),
-      target_id: ['CATEGORY', 'ARTICLE', 'MODULE', 'DEPARTMENT'].includes(targetType) ? targetId.trim() || null : null,
-      external_url: targetType === 'EXTERNAL_LINK' ? externalUrl.trim() || null : null,
-      open_in_new_tab: openInNewTab,
-      icon: icon.trim() || null,
-      is_visible: isVisible,
-    }
-
-    updateMutation.mutate(payload)
-  }
 
   return (
     <div className="flex h-full flex-col bg-card rounded-xl border border-border shadow-xs">
@@ -315,7 +156,9 @@ function MenuItemConfigForm({
       <div className="flex items-center justify-between border-b p-4">
         <div className="min-w-0">
           <h3 className="font-semibold text-foreground text-sm truncate">Cấu hình mục</h3>
-          <p className="text-muted-foreground text-xs truncate">{item.title}</p>
+          <p className="text-muted-foreground text-xs truncate">
+            {form.translations.vi.title || item.title || 'Mục menu'}
+          </p>
         </div>
         <Button
           variant="ghost"
@@ -329,17 +172,90 @@ function MenuItemConfigForm({
 
       {/* Form cấu hình */}
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Tiêu đề */}
+        {/* Banner cảnh báo liên kết hỏng (đích đã bị xóa) */}
+        {item?.target_info?.status === 'DELETED' && (
+          <div className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 text-destructive text-[11px] leading-normal flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Cảnh báo liên kết hỏng:</span> Tài nguyên liên kết đích của mục menu này đã bị xóa khỏi hệ thống. Vui lòng chọn liên kết mới hoặc đổi loại liên kết.
+            </div>
+          </div>
+        )}
+
+        {/* Tab đa ngôn ngữ (VI / EN) */}
+        <div className="space-y-3 bg-muted/20 p-2 rounded-lg border border-border/60">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase text-muted-foreground tracking-wider">
+              Nội dung đa ngôn ngữ
+            </span>
+            {activeTab === 'en' && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleAutoTranslate}
+                disabled={isTranslating}
+                className="h-7 text-[10px] px-2 text-primary hover:bg-primary/10 cursor-pointer flex items-center gap-1 font-semibold"
+              >
+                {isTranslating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <span>Translate 🇻🇳 ➔ 🇬🇧</span>
+                )}
+              </Button>
+            )}
+          </div>
+          
+          <div className="flex border-b border-border/80 p-0.5 bg-muted/40 rounded-md">
+            <button
+              type="button"
+              onClick={() => setActiveTab('vi')}
+              className={cn(
+                'flex-1 text-center py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5',
+                activeTab === 'vi'
+                  ? 'bg-background text-primary shadow-xs border border-border/60'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <span>🇻🇳 Tiếng Việt</span>
+              <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", isTabComplete('vi') ? "bg-emerald-500" : "bg-destructive")} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('en')}
+              className={cn(
+                'flex-1 text-center py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5',
+                activeTab === 'en'
+                  ? 'bg-background text-primary shadow-xs border border-border/60'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <span>🇬🇧 Tiếng Anh</span>
+              <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", isTabComplete('en') ? "bg-emerald-500" : "bg-destructive")} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tiêu đề theo ngôn ngữ đang active */}
         <div className="space-y-1.5">
-          <Label htmlFor="title" className="text-xs font-semibold text-foreground/80">
-            Tiêu đề hiển thị <span className="text-destructive">*</span>
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="title" className="text-xs font-semibold text-foreground/80 flex items-center gap-1">
+              Tiêu đề hiển thị ({activeTab === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh'})
+              <span className="text-destructive">*</span>
+            </Label>
+            {isTranslating && (
+              <span className="text-[10px] text-primary font-semibold animate-pulse flex items-center gap-1">
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                Đang dịch tự động...
+              </span>
+            )}
+          </div>
           <Input
             id="title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => handleTranslationChange(activeTab, 'title', e.target.value)}
             disabled={!canUpdate}
-            placeholder="VD: Giới thiệu"
+            placeholder={activeTab === 'vi' ? 'VD: Giới thiệu' : 'VD: About Us'}
             className="font-medium bg-background border-border/80"
           />
         </div>
@@ -352,11 +268,7 @@ function MenuItemConfigForm({
           <Select
             value={targetType}
             disabled={!canUpdate}
-            onValueChange={(val) => {
-              setTargetType(val)
-              setTargetId('')
-              setExternalUrl('')
-            }}
+            onValueChange={setTargetType}
           >
             <SelectTrigger id="targetType" className="h-9 text-sm">
               <SelectValue placeholder="Chọn loại liên kết" />
@@ -396,7 +308,7 @@ function MenuItemConfigForm({
             </Label>
             <CategoryTreeSelect
               value={targetId || null}
-              onChange={(id) => setTargetId(id)}
+              onChange={setTargetId}
               disabled={!canUpdate}
             />
           </div>
@@ -432,108 +344,6 @@ function MenuItemConfigForm({
             />
           </div>
         )}
-
-        {/* Icon Picker Popover */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-foreground/80">
-            Icon hiển thị
-          </Label>
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full h-10 justify-between px-3 text-sm font-normal cursor-pointer bg-background hover:bg-muted"
-                disabled={!canUpdate}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted border border-dashed text-muted-foreground">
-                    {icon && icon !== 'NONE_ICON' ? (
-                      <LucideIcon name={icon} size={15} />
-                    ) : (
-                      <Smile className="h-3.5 w-3.5" />
-                    )}
-                  </div>
-                  <span>
-                    {icon && icon !== 'NONE_ICON' ? icon : 'Không hiển thị Icon'}
-                  </span>
-                </div>
-                <div className="text-xs text-muted-foreground">Thay đổi</div>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-3 z-50" align="start">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between border-b pb-1.5">
-                  <span className="text-xs font-semibold text-foreground">Chọn biểu tượng</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1.5 text-[10px] text-destructive hover:bg-destructive/10 cursor-pointer"
-                    onClick={() => {
-                      setIcon('')
-                      setPopoverOpen(false)
-                      setSearchTerm('')
-                    }}
-                  >
-                    Gỡ bỏ
-                  </Button>
-                </div>
-
-                {/* Thanh tìm kiếm */}
-                <div className="relative">
-                  <Input
-                    placeholder="Tìm kiếm biểu tượng..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 text-xs pr-7 bg-muted/30"
-                  />
-                  {searchTerm && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs font-bold"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-
-                <div className="max-h-60 overflow-y-auto space-y-3.5 pr-1">
-                  {filteredCategories.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-muted-foreground">
-                      Không tìm thấy biểu tượng nào.
-                    </div>
-                  ) : (
-                    filteredCategories.map((cat) => (
-                      <div key={cat.category} className="space-y-1.5">
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                          {cat.category}
-                        </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {cat.icons.map((ico) => (
-                            <Button
-                              key={ico.code}
-                              type="button"
-                              variant={icon === ico.code ? 'default' : 'outline'}
-                              className="h-10 w-10 p-0 flex items-center justify-center cursor-pointer transition-all hover:border-primary"
-                              onClick={() => {
-                                setIcon(ico.code)
-                                setPopoverOpen(false)
-                                setSearchTerm('') // Reset tìm kiếm sau khi chọn
-                              }}
-                              title={ico.name}
-                            >
-                              <LucideIcon name={ico.code} size={18} />
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
 
         <div className="h-px bg-border my-2" />
 
@@ -595,8 +405,8 @@ function MenuItemConfigForm({
             type="submit"
             size="sm"
             onClick={handleSubmit}
-            disabled={updateMutation.isPending}
-            className="cursor-pointer shadow-sm flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/95"
+            disabled={updateMutation.isPending || !isFormValid()}
+            className="cursor-pointer shadow-sm flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/95 font-bold"
           >
             <Save className="h-4 w-4" />
             {updateMutation.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}

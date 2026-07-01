@@ -33,6 +33,8 @@ interface CategoryDragDropEditorProps {
   onSelectItem: (itemId: string | null) => void
   onCreateItem?: (parentId: string | null) => void
   refetchTree: () => void
+  isCreating?: boolean
+  createParentId?: string | null
 }
 
 // 1. Helper: Làm phẳng cấu trúc cây danh mục thành danh sách phẳng (Flat List)
@@ -123,6 +125,8 @@ export function CategoryDragDropEditor({
   onSelectItem,
   onCreateItem,
   refetchTree,
+  isCreating = false,
+  createParentId = null,
 }: CategoryDragDropEditorProps) {
   const { hasPermission } = useAuth()
   const canCreate = hasPermission('category.create')
@@ -441,6 +445,51 @@ export function CategoryDragDropEditor({
   }
 
   let displayItems = flatItems.map((item) => ({ ...item }))
+
+  // Chèn node ảo xem trước vị trí đang tạo
+  if (isCreating) {
+    const virtualId = 'virtual-new-node'
+    const virtualNode = {
+      id: virtualId,
+      name: createParentId ? 'Danh mục con mới (Xem trước...)' : 'Danh mục mới (Xem trước...)',
+      slug: 'danh-muc-moi',
+      description: null,
+      depth: 1,
+      sort_order: 9999,
+      status: 'DRAFT' as const,
+      is_visible: true,
+      parent_id: createParentId,
+      is_locked: false,
+      article_count: 0,
+      is_translated: { vi: true, en: false },
+      translations: {
+        vi: { name: createParentId ? 'Danh mục con mới (Xem trước...)' : 'Danh mục mới (Xem trước...)', slug: 'danh-muc-moi', description: '', seo_title: '', seo_description: '' },
+        en: { name: '', slug: '', description: '', seo_title: '', seo_description: '' }
+      },
+      children_count: 0,
+      isVirtual: true,
+    }
+
+    if (!createParentId) {
+      virtualNode.depth = 1
+      displayItems.push(virtualNode)
+    } else {
+      const parentIdx = displayItems.findIndex(item => item.id === createParentId)
+      if (parentIdx !== -1) {
+        const parentNode = displayItems[parentIdx]
+        virtualNode.depth = Math.min(3, parentNode.depth + 1)
+        
+        let insertIdx = parentIdx + 1
+        while (insertIdx < displayItems.length && displayItems[insertIdx].depth > parentNode.depth) {
+          insertIdx++
+        }
+        displayItems.splice(insertIdx, 0, virtualNode)
+      } else {
+        virtualNode.depth = 1
+        displayItems.push(virtualNode)
+      }
+    }
+  }
   
   if (activeId && placeholderInfo) {
     const oldIndex = flatItems.findIndex((item) => item.id === activeId)
@@ -527,7 +576,7 @@ export function CategoryDragDropEditor({
         <div className="flex items-center gap-2">
           {reorderMutation.isPending && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse mr-2 bg-muted/50 px-2.5 py-1 rounded-md border">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <span>Đang tự động lưu...</span>
             </div>
           )}
@@ -631,9 +680,9 @@ export function CategoryDragDropEditor({
                         }
                       }}
                       onAddChild={() => onCreateItem?.(item.id)}
-                      isLocked={item.is_locked}
                       articleCount={item.article_count}
                       isTranslated={item.is_translated}
+                      isVirtual={(item as any).isVirtual}
                     />
                   )
                 })}
@@ -652,7 +701,6 @@ export function CategoryDragDropEditor({
                     isSelected={true}
                     onEdit={() => {}}
                     onDelete={() => {}}
-                    isLocked={activeItem.is_locked}
                     articleCount={activeItem.article_count}
                     isTranslated={activeItem.is_translated}
                   />

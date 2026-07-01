@@ -7,6 +7,10 @@ export interface TargetInfo {
   path?: string | null
 }
 
+export interface MenuItemTranslation {
+  title: string
+}
+
 export interface MenuItemNode {
   id: string
   title: string
@@ -15,12 +19,13 @@ export interface MenuItemNode {
   target_info: TargetInfo | null
   external_url: string | null
   open_in_new_tab: boolean
-  icon: string | null
   depth: number
   sort_order: number
   is_visible: boolean
   has_link: boolean
   children: MenuItemNode[]
+  translations?: Record<string, MenuItemTranslation> | null
+  is_translated?: Record<string, boolean> | null
 }
 
 export interface MenuTreeResponse {
@@ -40,13 +45,12 @@ export interface MenuListItem {
 }
 
 export interface MenuItemPayload {
-  title: string
   target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | 'DEPARTMENT' | null
   target_id: string | null
   external_url: string | null
   open_in_new_tab: boolean
-  icon: string | null
   is_visible: boolean
+  translations: Record<string, MenuItemTranslation>
 }
 
 export interface FlatMenuItem extends Omit<MenuItemNode, 'children'> {
@@ -54,5 +58,6 @@ export interface FlatMenuItem extends Omit<MenuItemNode, 'children'> {
   isGhost?: boolean
   isPlaceholder?: boolean
   isValid?: boolean
+  isVirtual?: boolean
 }
 

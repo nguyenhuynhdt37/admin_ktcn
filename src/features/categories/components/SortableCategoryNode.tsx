@@ -9,6 +9,8 @@ import {
   EyeOff,
   Plus,
   Lock,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -28,10 +30,13 @@ interface SortableCategoryNodeProps {
   onEdit: () => void
   onDelete: () => void
   onAddChild?: () => void
-  isLocked?: boolean
   deletedAt?: string | null
   articleCount?: number
   isTranslated?: Record<string, boolean>
+  isVirtual?: boolean
+  hasChildren?: boolean
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 const STATUS_CONFIG: Record<CategoryStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
@@ -52,10 +57,13 @@ export function SortableCategoryNode({
   onEdit,
   onDelete,
   onAddChild,
-  isLocked = false,
   deletedAt = null,
   articleCount = 0,
   isTranslated = {},
+  isVirtual = false,
+  hasChildren = false,
+  isCollapsed = false,
+  onToggleCollapse,
 }: SortableCategoryNodeProps) {
   const {
     attributes,
@@ -64,14 +72,15 @@ export function SortableCategoryNode({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id })
+  } = useSortable({ id: isVirtual ? 'virtual-node-prevent-drag' : id, disabled: isVirtual })
+
   const { hasPermission } = useAuth()
   const canUpdate = hasPermission('category.update')
   const canDelete = hasPermission('category.delete')
   const canCreate = hasPermission('category.create')
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: isVirtual ? undefined : CSS.Transform.toString(transform),
     transition,
     paddingLeft: `${(depth - 1) * 28}px`, // Thụt lề theo depth
   }
@@ -89,6 +98,51 @@ export function SortableCategoryNode({
     onDelete()
   }
 
+  if (isVirtual) {
+    return (
+      <div
+        ref={isVirtual ? undefined : setNodeRef}
+        style={style}
+        className="group relative my-1 transition-all duration-200"
+      >
+        <div
+          className="flex items-center justify-between rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-3 shadow-xs"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            {depth > 1 && (
+              <div 
+                className="absolute top-1/2 -translate-y-1/2 border-l border-b border-primary/30 border-dashed rounded-bl-sm"
+                style={{
+                  left: `${(depth - 2) * 28 + 14}px`,
+                  width: '14px',
+                  height: '24px'
+                }}
+              />
+            )}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 border border-primary/20">
+              <Folder className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-semibold text-primary italic truncate">
+                  {title || 'Danh mục mới (Nhập tên bên phải...)'}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  (Cấp {depth})
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center shrink-0 ml-2">
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 border-amber-500/30 bg-amber-500/10 text-amber-600 font-bold shrink-0">
+              XEM TRƯỚC (CHƯA LƯU)
+            </Badge>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -103,7 +157,7 @@ export function SortableCategoryNode({
       <div
         className={cn(
           'flex items-center justify-between rounded-lg border bg-card p-3 shadow-xs hover:border-primary/50 transition-colors',
-          isSelected ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-border',
+          isSelected ? 'border-primary ring-1 ring-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-border',
           (!isVisible || normalizedStatus !== 'ACTIVE') && 'bg-muted/30 opacity-70',
           isGhost && 'border-dashed border-primary/40',
           isGhost && !isValid && 'border-destructive/60 border-dashed text-destructive bg-destructive/5'
@@ -136,6 +190,26 @@ export function SortableCategoryNode({
             </button>
           )}
 
+          {/* Nút thu gọn / mở rộng */}
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleCollapse?.()
+              }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors shrink-0 cursor-pointer"
+              title={isCollapsed ? "Mở rộng danh mục con" : "Thu gọn danh mục con"}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </button>
+          ) : (
+            <div className="w-[22px] shrink-0" />
+          )}
+
           {/* Icon Folder */}
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted border">
             <Folder className={cn("h-4 w-4", normalizedStatus === 'ACTIVE' ? "text-blue-500" : "text-muted-foreground")} />
@@ -160,9 +234,6 @@ export function SortableCategoryNode({
                   {articleCount} bài viết
                 </span>
               </span>
-              {isLocked && (
-                <Lock className="h-3.5 w-3.5 text-amber-500 shrink-0" title="Danh mục hệ thống (Khóa xóa)" />
-              )}
             </div>
             
             {/* Tag dịch thuật VI / EN */}
@@ -236,7 +307,7 @@ export function SortableCategoryNode({
           </Button>
 
           {/* Nút Xóa */}
-          {canDelete && !isLocked && articleCount === 0 && (
+          {canDelete && articleCount === 0 && (
             <Button
               type="button"
               variant="ghost"

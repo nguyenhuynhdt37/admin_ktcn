@@ -73,6 +73,8 @@ export function CategoriesPage() {
                   onSelectItem={(id) => setPanelState({ mode: id ? 'edit' : null, id, parentId: null })}
                   onCreateItem={(parentId) => setPanelState({ mode: 'create', id: null, parentId })}
                   refetchTree={refetchTree}
+                  isCreating={panelState.mode === 'create'}
+                  createParentId={panelState.parentId}
                 />
               </CardContent>
             </Card>

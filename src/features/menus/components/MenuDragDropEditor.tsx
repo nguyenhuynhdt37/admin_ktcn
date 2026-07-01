@@ -33,6 +33,9 @@ interface MenuDragDropEditorProps {
   selectedItemId: string | null
   onSelectItem: (itemId: string | null) => void
   refetchTree: () => void
+  isCreating?: boolean
+  createParentId?: string | null
+  onCreateItem?: (parentId: string | null) => void
 }
 
 // 1. Helper: Làm phẳng cấu trúc cây menu thành danh sách phẳng (Flat List)
@@ -40,7 +43,9 @@ function flattenTree(nodes: MenuItemNode[], parentId: string | null = null): Fla
   let result: FlatMenuItem[] = []
   nodes.forEach((node) => {
     const { children, ...rest } = node
-    result.push({ ...rest, parent_id: parentId })
+    // API mới trả về title trong translations, gán title phẳng bằng translations.vi.title
+    const title = node.translations?.vi?.title || node.title || ''
+    result.push({ ...rest, title, parent_id: parentId })
     if (children && children.length > 0) {
       result = result.concat(flattenTree(children, node.id))
     }
@@ -105,6 +110,9 @@ export function MenuDragDropEditor({
   selectedItemId,
   onSelectItem,
   refetchTree,
+  isCreating = false,
+  createParentId = null,
+  onCreateItem,
 }: MenuDragDropEditorProps) {
   const { hasPermission } = useAuth()
   const canUpdate = hasPermission('menu.update')
@@ -224,9 +232,9 @@ export function MenuDragDropEditor({
     if (overId === 'placeholder') return
 
     const oldIndex = flatItems.findIndex((item) => item.id === activeId)
-    const overIndex = flatItems.findIndex((item) => item.id === overId)
+    let overIndex = flatItems.findIndex((item) => item.id === overId)
 
-    if (oldIndex === -1 || overIndex === -1) return
+    if (oldIndex === -1) return
 
     // 1. Tìm cụm con cháu của item đang kéo
     const descendants: FlatMenuItem[] = []
@@ -239,28 +247,34 @@ export function MenuDragDropEditor({
       nextIdx++
     }
 
-    // Đo chiều sâu con cháu lớn nhất hiện tại của cụm đang kéo (trước khi di chuyển)
-    let maxChildDepthInCluster = draggedItem.depth
-    descendants.forEach((d) => {
-      if (d.depth > maxChildDepthInCluster) {
-        maxChildDepthInCluster = d.depth
-      }
-    })
-
     // Danh sách phẳng đã lọc cụm đang kéo
     const itemsWithoutCluster = flatItems.filter(
       (item) => item.id !== activeId && !descendants.some((d) => d.id === item.id)
     )
 
-    // Xác định vị trí chèn mới
+    // Sửa lỗi: Nếu rê chuột qua chính mình (kéo tại chỗ để dịch ngang), overIndex và targetIndex sẽ trỏ về vị trí cũ
     let targetIndex = itemsWithoutCluster.findIndex((item) => item.id === overId)
-    if (targetIndex === -1) targetIndex = itemsWithoutCluster.length
+    if (targetIndex === -1) {
+      targetIndex = oldIndex
+    }
 
     const isBelow = overIndex > oldIndex
-    const insertIndex = Math.min(
+    let insertIndex = Math.min(
       itemsWithoutCluster.length,
       isBelow ? targetIndex + 1 : targetIndex
     )
+
+    // Nếu overId chính là activeId (kéo tại chỗ để thay đổi depth)
+    if (overId === activeId) {
+      // Tìm số phần tử đứng trước activeId (không tính con cháu) để lấy vị trí chèn cũ chính xác
+      let countBefore = 0
+      for (let i = 0; i < oldIndex; i++) {
+        if (!descendants.some((d) => d.id === flatItems[i].id)) {
+          countBefore++
+        }
+      }
+      insertIndex = countBefore
+    }
 
     // 2. Tính toán depth dự kiến của placeholder (lệch ngang delta.x)
     const horizontalOffset = Math.round(delta.x / 28)
@@ -387,6 +401,20 @@ export function MenuDragDropEditor({
         (item) => item.id !== activeId && !descendants.some((d) => d.id === item.id)
       )
 
+      // Cố định vị trí chèn cũ nếu thả tại chỗ cũ
+      let insertIndex = cachedPlaceholder.index
+      const isBelow = prev.findIndex((item) => item.id === over.id) > oldIndex
+      
+      // Sửa lỗi tự nhảy vị trí: Nếu thả chuột tại chỗ mà không đổi vị trí dọc lẫn độ sâu ngang, return luôn
+      const horizontalOffset = Math.round(event.delta.x / 28)
+      const projectedDepth = Math.max(1, Math.min(3, draggedItem.depth + horizontalOffset))
+      
+      if (over.id === activeId && projectedDepth === draggedItem.depth) {
+        setActiveId(null)
+        setPlaceholderInfo(null)
+        return prev
+      }
+
       const depthDiff = cachedPlaceholder.depth - draggedItem.depth
       const updatedDraggedItem = {
         ...draggedItem,
@@ -399,7 +427,7 @@ export function MenuDragDropEditor({
       }))
 
       const result = [...itemsWithoutCluster]
-      result.splice(cachedPlaceholder.index, 0, updatedDraggedItem, ...updatedDescendants)
+      result.splice(insertIndex, 0, updatedDraggedItem, ...updatedDescendants)
 
       const finalized = recalculateParentsAndDepths(result)
 
@@ -413,11 +441,10 @@ export function MenuDragDropEditor({
       const payload = finalized.map((item, index) => ({
         id: item.id,
         parent_id: item.parent_id,
-        sort_order: index,
-        depth: item.depth,
+        sort_order: index * 10,
       }))
       
-      reorderMutation.mutate(payload)
+      reorderMutation.mutate(payload as any)
 
       // Set null đồng thời trong callback setState để batch render hoàn tất cùng lúc
       setActiveId(null)
@@ -428,6 +455,47 @@ export function MenuDragDropEditor({
   }
 
   let displayItems = flatItems.map((item) => ({ ...item }))
+
+  // Chèn node ảo xem trước vị trí đang tạo mục menu mới
+  if (isCreating) {
+    const virtualId = 'virtual-new-node'
+    const virtualNode = {
+      id: virtualId,
+      title: createParentId ? 'Mục menu con mới (Xem trước...)' : 'Mục menu mới (Xem trước...)',
+      depth: 1,
+      target_type: null,
+      target_id: null,
+      target_info: null,
+      external_url: null,
+      open_in_new_tab: false,
+      icon: null,
+      sort_order: 9999,
+      is_visible: true,
+      parent_id: createParentId,
+      has_link: false,
+      isVirtual: true,
+    }
+
+    if (!createParentId) {
+      virtualNode.depth = 1
+      displayItems.push(virtualNode)
+    } else {
+      const parentIdx = displayItems.findIndex(item => item.id === createParentId)
+      if (parentIdx !== -1) {
+        const parentNode = displayItems[parentIdx]
+        virtualNode.depth = Math.min(3, parentNode.depth + 1)
+        
+        let insertIdx = parentIdx + 1
+        while (insertIdx < displayItems.length && displayItems[insertIdx].depth > parentNode.depth) {
+          insertIdx++
+        }
+        displayItems.splice(insertIdx, 0, virtualNode)
+      } else {
+        virtualNode.depth = 1
+        displayItems.push(virtualNode)
+      }
+    }
+  }
 
   if (activeId && placeholderInfo) {
     const oldIndex = flatItems.findIndex((item) => item.id === activeId)
@@ -517,7 +585,7 @@ export function MenuDragDropEditor({
         <div className="flex items-center gap-2">
           {reorderMutation.isPending && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse mr-2 bg-muted/50 px-2.5 py-1 rounded-md border">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               <span>Đang tự động lưu...</span>
             </div>
           )}
@@ -525,7 +593,7 @@ export function MenuDragDropEditor({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => createMutation.mutate(null)}
+              onClick={() => onCreateItem?.(null)}
               className="flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
@@ -542,7 +610,7 @@ export function MenuDragDropEditor({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => createMutation.mutate(null)}
+              onClick={() => onCreateItem?.(null)}
               className="mt-3 cursor-pointer"
             >
               Tạo mục đầu tiên
@@ -621,14 +689,15 @@ export function MenuDragDropEditor({
                       isSelected={item.id === selectedItemId || item.id === justDroppedId}
                       isGhost={item.isGhost}
                       isValid={item.isValid}
-                      icon={item.icon}
                       onEdit={() => onSelectItem(item.id)}
                       onDelete={() => {
                         if (confirm(`Bạn có chắc chắn muốn xóa mục "${item.title}" cùng toàn bộ mục con?`)) {
                           deleteMutation.mutate(item.id)
                         }
                       }}
-                      onAddChild={() => createMutation.mutate(item.id)}
+                      onAddChild={() => onCreateItem?.(item.id)}
+                      isVirtual={(item as any).isVirtual}
+                      isTranslated={item.is_translated}
                     />
                   )
                 })}
@@ -648,9 +717,9 @@ export function MenuDragDropEditor({
                     externalUrl={activeItem.external_url}
                     isVisible={activeItem.is_visible}
                     isSelected={true}
-                    icon={activeItem.icon}
                     onEdit={() => {}}
                     onDelete={() => {}}
+                    isTranslated={activeItem.is_translated}
                   />
                 </div>
               ) : null}

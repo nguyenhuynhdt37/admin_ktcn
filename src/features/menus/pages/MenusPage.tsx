@@ -13,10 +13,19 @@ import { Button } from '@/shared/components/ui/button'
 import { menusService } from '../services/menusService'
 import { MenuDragDropEditor } from '../components/MenuDragDropEditor'
 import { MenuItemConfigPanel } from '../components/MenuItemConfigPanel'
+import { MenuItemCreatePanel } from '../components/MenuItemCreatePanel'
 
 export function MenusPage() {
   const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null)
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  const [panelState, setPanelState] = useState<{
+    mode: 'create' | 'edit' | null
+    id: string | null
+    parentId: string | null
+  }>({
+    mode: null,
+    id: null,
+    parentId: null,
+  })
 
   // 1. Query lấy danh sách Menu (Header, Footer,...)
   const {
@@ -52,7 +61,7 @@ export function MenusPage() {
   // Đóng panel cấu hình chi tiết khi đổi menu
   const handleMenuChange = (menuId: string) => {
     setSelectedMenuId(menuId)
-    setSelectedItemId(null)
+    setPanelState({ mode: null, id: null, parentId: null })
   }
 
   // Khối giao diện chính
@@ -141,9 +150,12 @@ export function MenusPage() {
                   <MenuDragDropEditor
                     menuId={menuTree.id}
                     items={menuTree.items}
-                    selectedItemId={selectedItemId}
-                    onSelectItem={setSelectedItemId}
+                    selectedItemId={panelState.mode === 'edit' ? panelState.id : null}
+                    onSelectItem={(id) => setPanelState({ mode: id ? 'edit' : null, id, parentId: null })}
+                    onCreateItem={(parentId) => setPanelState({ mode: 'create', id: null, parentId })}
                     refetchTree={refetchTree}
+                    isCreating={panelState.mode === 'create'}
+                    createParentId={panelState.parentId}
                   />
                 )}
               </CardContent>
@@ -152,14 +164,25 @@ export function MenusPage() {
 
           {/* Cột cấu hình chi tiết (Cột bên phải) */}
           <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4">
-            {selectedItemId && selectedMenuId ? (
+            {panelState.mode === 'edit' && panelState.id && selectedMenuId ? (
               <ErrorBoundary>
                 <MenuItemConfigPanel
-                  key={selectedItemId}
+                  key={panelState.id}
                   menuId={selectedMenuId}
-                  itemId={selectedItemId}
-                  onClose={() => setSelectedItemId(null)}
+                  itemId={panelState.id}
+                  onClose={() => setPanelState({ mode: null, id: null, parentId: null })}
                   refetchTree={refetchTree}
+                />
+              </ErrorBoundary>
+            ) : panelState.mode === 'create' && selectedMenuId ? (
+              <ErrorBoundary>
+                <MenuItemCreatePanel
+                  key="create-panel"
+                  menuId={selectedMenuId}
+                  parentId={panelState.parentId}
+                  onClose={() => setPanelState({ mode: null, id: null, parentId: null })}
+                  refetchTree={refetchTree}
+                  onSelectCreatedItem={(id) => setPanelState({ mode: 'edit', id, parentId: null })}
                 />
               </ErrorBoundary>
             ) : (

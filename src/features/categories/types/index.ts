@@ -21,7 +21,6 @@ export interface Category {
   seo_title?: string | null
   seo_description?: string | null
   is_weekly_schedule: boolean
-  is_locked: boolean
   article_count?: number
   is_translated?: Record<string, boolean>
   created_at: string
@@ -42,7 +41,6 @@ export interface CategoryTreeNode {
   seo_title?: string | null
   seo_description?: string | null
   is_weekly_schedule: boolean
-  is_locked: boolean
   article_count?: number
   is_translated?: Record<string, boolean>
   children: CategoryTreeNode[]
@@ -56,7 +54,6 @@ export interface CategoryCreatePayload {
   status?: CategoryStatus
   is_visible?: boolean
   is_weekly_schedule?: boolean
-  is_locked?: boolean
   translations: Record<string, CategoryTranslation>
 }
 
@@ -67,7 +64,6 @@ export interface CategoryUpdatePayload {
   status?: CategoryStatus
   is_visible?: boolean
   is_weekly_schedule?: boolean
-  is_locked?: boolean
   translations: Record<string, CategoryTranslation>
 }
 
@@ -94,7 +90,6 @@ export interface FlatCategoryNode {
   depth: number
   children_count: number
   is_weekly_schedule: boolean
-  is_locked: boolean
   article_count?: number
   is_translated?: Record<string, boolean>
   isGhost?: boolean

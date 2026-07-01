@@ -20,7 +20,6 @@ export interface FormState {
   is_visible: boolean
   thumbnail_id: string | null
   is_weekly_schedule: boolean
-  is_locked: boolean
   sort_order: number
   translations: {
     vi: TranslationFormState
@@ -42,7 +41,6 @@ export const INITIAL_FORM: FormState = {
   is_visible: true,
   thumbnail_id: null,
   is_weekly_schedule: false,
-  is_locked: false,
   sort_order: 0,
   translations: {
     vi: { ...INITIAL_TRANSLATION },
@@ -165,7 +163,6 @@ export function useCategoryForm({
         is_visible: categoryDetail.is_visible !== false,
         thumbnail_id: categoryDetail.thumbnail_id || null,
         is_weekly_schedule: categoryDetail.is_weekly_schedule === true,
-        is_locked: categoryDetail.is_locked === true,
         sort_order: categoryDetail.sort_order || 0,
         translations: parsed
       })
@@ -392,11 +389,9 @@ export function useCategoryForm({
     if (!isTabComplete('vi') || !isTabComplete('en')) {
       return false
     }
-    if (slugCheck.exists) {
-      return false
-    }
+    // Bỏ chặn slugCheck.exists để người dùng bấm Lưu bình thường (vì Backend tự sinh hậu tố giải quyết trùng lặp)
     return true
-  }, [isTabComplete, slugCheck.exists])
+  }, [isTabComplete])
 
   // Xử lý lỗi API
   const handleApiError = (error: any, defaultMsg: string) => {
@@ -419,7 +414,6 @@ export function useCategoryForm({
         is_visible: form.is_visible,
         thumbnail_id: form.thumbnail_id,
         is_weekly_schedule: form.is_weekly_schedule,
-        is_locked: form.is_locked,
         sort_order: form.sort_order, // Gửi sort_order ngầm
         translations: {
           vi: {
