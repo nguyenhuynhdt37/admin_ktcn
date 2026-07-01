@@ -31,6 +31,7 @@ interface CategoryDragDropEditorProps {
   items: CategoryTreeNode[]
   selectedItemId: string | null
   onSelectItem: (itemId: string | null) => void
+  onCreateItem?: (parentId: string | null) => void
   refetchTree: () => void
 }
 
@@ -120,6 +121,7 @@ export function CategoryDragDropEditor({
   items,
   selectedItemId,
   onSelectItem,
+  onCreateItem,
   refetchTree,
 }: CategoryDragDropEditorProps) {
   const { hasPermission } = useAuth()
@@ -261,25 +263,25 @@ export function CategoryDragDropEditor({
       nextIdx++
     }
 
-    let maxChildDepthInCluster = draggedItem.depth
-    descendants.forEach((d) => {
-      if (d.depth > maxChildDepthInCluster) {
-        maxChildDepthInCluster = d.depth
-      }
-    })
+    const isActiveOrDescendant = overId === activeId || descendants.some((d) => d.id === overId)
 
     const itemsWithoutCluster = flatItems.filter(
       (item) => item.id !== activeId && !descendants.some((d) => d.id === item.id)
     )
 
-    let targetIndex = itemsWithoutCluster.findIndex((item) => item.id === overId)
-    if (targetIndex === -1) targetIndex = itemsWithoutCluster.length
+    let insertIndex: number
+    if (isActiveOrDescendant) {
+      insertIndex = oldIndex
+    } else {
+      let targetIndex = itemsWithoutCluster.findIndex((item) => item.id === overId)
+      if (targetIndex === -1) targetIndex = itemsWithoutCluster.length
 
-    const isBelow = overIndex > oldIndex
-    const insertIndex = Math.min(
-      itemsWithoutCluster.length,
-      isBelow ? targetIndex + 1 : targetIndex
-    )
+      const isBelow = overIndex > oldIndex
+      insertIndex = Math.min(
+        itemsWithoutCluster.length,
+        isBelow ? targetIndex + 1 : targetIndex
+      )
+    }
 
     const horizontalOffset = Math.round(delta.x / 28)
     let projectedDepth = draggedItem.depth + horizontalOffset
@@ -380,8 +382,16 @@ export function CategoryDragDropEditor({
         return prev
       }
 
-      const descendants: FlatCategoryNode[] = []
       const draggedItem = prev[oldIndex]
+
+      // Nếu thả chuột tại chính vị trí cũ và độ sâu cũ thì không cần làm gì
+      if (cachedPlaceholder.index === oldIndex && cachedPlaceholder.depth === draggedItem.depth) {
+        setActiveId(null)
+        setPlaceholderInfo(null)
+        return prev
+      }
+
+      const descendants: FlatCategoryNode[] = []
 
       let nextIdx = oldIndex + 1
       while (nextIdx < prev.length && prev[nextIdx].depth > draggedItem.depth) {
@@ -525,7 +535,7 @@ export function CategoryDragDropEditor({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => createMutation.mutate(null)}
+              onClick={() => onCreateItem?.(null)}
               className="flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
@@ -542,7 +552,7 @@ export function CategoryDragDropEditor({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => createMutation.mutate(null)}
+              onClick={() => onCreateItem?.(null)}
               className="mt-3 cursor-pointer"
             >
               Tạo mục đầu tiên
@@ -620,7 +630,7 @@ export function CategoryDragDropEditor({
                           deleteMutation.mutate(item.id)
                         }
                       }}
-                      onAddChild={() => createMutation.mutate(item.id)}
+                      onAddChild={() => onCreateItem?.(item.id)}
                       isLocked={item.is_locked}
                       articleCount={item.article_count}
                       isTranslated={item.is_translated}
