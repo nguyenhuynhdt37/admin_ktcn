@@ -1,25 +1,32 @@
 export type CategoryStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE'
 
-export interface Category {
-  id: string
-  parent_id: string | null
+export interface CategoryTranslation {
   name: string
   slug: string
   description: string | null
+  seo_title: string | null
+  seo_description: string | null
+}
+
+export interface Category {
+  id: string
+  parent_id: string | null
+  name?: string
+  slug?: string
+  description?: string | null
   thumbnail_id: string | null
   sort_order: number
   status: CategoryStatus
   is_visible: boolean
-  seo_title: string
-  seo_description: string
-  seo_keywords: string | null
-  seo_canonical?: string | null
-  seo_robots?: string | null
-  seo_og_image_id?: string | null
+  seo_title?: string | null
+  seo_description?: string | null
   is_weekly_schedule: boolean
   is_locked: boolean
+  article_count?: number
+  is_translated?: Record<string, boolean>
   created_at: string
   updated_at: string
+  translations?: Record<string, CategoryTranslation> | null
 }
 
 export interface CategoryTreeNode {
@@ -32,51 +39,36 @@ export interface CategoryTreeNode {
   sort_order: number
   status: CategoryStatus
   is_visible: boolean
-  seo_title: string
-  seo_description: string
-  seo_keywords: string | null
-  seo_canonical?: string | null
-  seo_robots?: string | null
-  seo_og_image_id?: string | null
+  seo_title?: string | null
+  seo_description?: string | null
   is_weekly_schedule: boolean
   is_locked: boolean
+  article_count?: number
+  is_translated?: Record<string, boolean>
   children: CategoryTreeNode[]
+  translations?: Record<string, CategoryTranslation> | null
 }
 
 export interface CategoryCreatePayload {
-  name: string
   parent_id?: string | null
-  slug?: string | null
-  description?: string | null
   thumbnail_id?: string | null
   sort_order?: number
   status?: CategoryStatus
   is_visible?: boolean
-  seo_title?: string | null
-  seo_description?: string | null
-  seo_keywords?: string | null
-  seo_canonical?: string | null
-  seo_robots?: string | null
-  seo_og_image_id?: string | null
   is_weekly_schedule?: boolean
+  is_locked?: boolean
+  translations: Record<string, CategoryTranslation>
 }
 
 export interface CategoryUpdatePayload {
-  name?: string
   parent_id?: string | null
-  slug?: string | null
-  description?: string | null
   thumbnail_id?: string | null
   sort_order?: number
   status?: CategoryStatus
   is_visible?: boolean
-  seo_title?: string | null
-  seo_description?: string | null
-  seo_keywords?: string | null
-  seo_canonical?: string | null
-  seo_robots?: string | null
-  seo_og_image_id?: string | null
   is_weekly_schedule?: boolean
+  is_locked?: boolean
+  translations: Record<string, CategoryTranslation>
 }
 
 export interface CategoryReorderItem {
@@ -103,7 +95,10 @@ export interface FlatCategoryNode {
   children_count: number
   is_weekly_schedule: boolean
   is_locked: boolean
+  article_count?: number
+  is_translated?: Record<string, boolean>
   isGhost?: boolean
   isPlaceholder?: boolean
   isValid?: boolean
+  translations?: Record<string, CategoryTranslation> | null
 }

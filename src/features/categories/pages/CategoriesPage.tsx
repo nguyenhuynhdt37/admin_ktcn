@@ -9,7 +9,15 @@ import { CategoryDragDropEditor } from '../components/CategoryDragDropEditor'
 import { CategoryFormPanel } from '../components/CategoryFormPanel'
 
 export function CategoriesPage() {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [panelState, setPanelState] = useState<{
+    mode: 'edit' | 'create' | null
+    id: string | null
+    parentId: string | null
+  }>({
+    mode: null,
+    id: null,
+    parentId: null,
+  })
 
   // Query lấy cấu trúc cây danh mục đầy đủ từ Backend
   const {
@@ -61,8 +69,9 @@ export function CategoriesPage() {
               <CardContent className="pt-6">
                 <CategoryDragDropEditor
                   items={treeData}
-                  selectedItemId={selectedCategoryId}
-                  onSelectItem={setSelectedCategoryId}
+                  selectedItemId={panelState.mode === 'edit' ? panelState.id : null}
+                  onSelectItem={(id) => setPanelState({ mode: id ? 'edit' : null, id, parentId: null })}
+                  onCreateItem={(parentId) => setPanelState({ mode: 'create', id: null, parentId })}
                   refetchTree={refetchTree}
                 />
               </CardContent>
@@ -71,11 +80,14 @@ export function CategoriesPage() {
 
           {/* Cột phải (Form cấu hình chi tiết) */}
           <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-4">
-            {selectedCategoryId ? (
+            {panelState.mode ? (
               <CategoryFormPanel
-                selectedCategoryId={selectedCategoryId}
-                onClose={() => setSelectedCategoryId(null)}
+                mode={panelState.mode}
+                selectedCategoryId={panelState.id || ''}
+                createParentId={panelState.parentId}
+                onClose={() => setPanelState({ mode: null, id: null, parentId: null })}
                 refetchTree={refetchTree}
+                onSelectCreatedItem={(id) => setPanelState({ mode: 'edit', id, parentId: null })}
               />
             ) : (
               <Card className="border-border border-dashed bg-muted/10 shadow-none">

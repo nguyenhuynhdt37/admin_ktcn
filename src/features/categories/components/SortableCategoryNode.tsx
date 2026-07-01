@@ -29,6 +29,9 @@ interface SortableCategoryNodeProps {
   onDelete: () => void
   onAddChild?: () => void
   isLocked?: boolean
+  deletedAt?: string | null
+  articleCount?: number
+  isTranslated?: Record<string, boolean>
 }
 
 const STATUS_CONFIG: Record<CategoryStatus, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
@@ -42,14 +45,17 @@ export function SortableCategoryNode({
   title,
   depth,
   status,
-  isVisible,
-  isSelected,
+  isVisible = true,
+  isSelected = false,
   isGhost = false,
   isValid = true,
   onEdit,
   onDelete,
   onAddChild,
   isLocked = false,
+  deletedAt = null,
+  articleCount = 0,
+  isTranslated = {},
 }: SortableCategoryNodeProps) {
   const {
     attributes,
@@ -72,6 +78,16 @@ export function SortableCategoryNode({
 
   const normalizedStatus = (status || 'DRAFT').toUpperCase() as CategoryStatus
   const statusCfg = STATUS_CONFIG[normalizedStatus] || STATUS_CONFIG['DRAFT']
+
+  // Xử lý click nút xóa danh mục
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (articleCount > 0) {
+      alert(`Không thể xóa danh mục này do vẫn còn ${articleCount} bài viết đang hoạt động liên kết. Vui lòng xóa hoặc di chuyển bài viết trước khi thực hiện.`)
+      return
+    }
+    onDelete()
+  }
 
   return (
     <div
@@ -126,21 +142,55 @@ export function SortableCategoryNode({
           </div>
 
           {/* Tiêu đề & badge */}
-          <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1.5">
+          <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
               <span
                 onClick={onEdit}
                 className={cn(
                   'text-sm font-medium truncate cursor-pointer hover:text-primary transition-colors',
-                  !isVisible && 'text-muted-foreground line-through'
+                  (deletedAt || status === 'DELETED') && 'text-muted-foreground line-through opacity-50',
+                  !isVisible && 'opacity-70'
                 )}
               >
                 {title}
+                <span 
+                  className="ml-2 text-[10px] text-muted-foreground font-semibold bg-muted/80 px-1.5 py-0.5 rounded-md border" 
+                  title={`${articleCount} bài viết trong danh mục này`}
+                >
+                  {articleCount} bài viết
+                </span>
               </span>
               {isLocked && (
                 <Lock className="h-3.5 w-3.5 text-amber-500 shrink-0" title="Danh mục hệ thống (Khóa xóa)" />
               )}
             </div>
+            
+            {/* Tag dịch thuật VI / EN */}
+            <div className="flex items-center gap-1 shrink-0">
+              <span 
+                className={cn(
+                  "text-[9px] font-semibold px-1 rounded-sm border",
+                  isTranslated?.vi 
+                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                    : "bg-destructive/10 text-destructive border-destructive/20"
+                )}
+                title={isTranslated?.vi ? "Đã hoàn thành Tiếng Việt" : "Chưa hoàn thiện Tiếng Việt"}
+              >
+                VI
+              </span>
+              <span 
+                className={cn(
+                  "text-[9px] font-semibold px-1 rounded-sm border",
+                  isTranslated?.en 
+                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                    : "bg-destructive/10 text-destructive border-destructive/20"
+                )}
+                title={isTranslated?.en ? "Đã hoàn thành Tiếng Anh" : "Chưa hoàn thiện Tiếng Anh"}
+              >
+                EN
+              </span>
+            </div>
+
             <div className="flex items-center gap-1.5">
               <Badge variant={statusCfg.variant} className="text-[10px] px-1 py-0 h-4.5 font-normal">
                 {statusCfg.label}
@@ -160,6 +210,7 @@ export function SortableCategoryNode({
           {/* Nút Thêm Danh Mục Con */}
           {depth < 3 && onAddChild && canCreate && (
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               onClick={onAddChild}
@@ -174,6 +225,7 @@ export function SortableCategoryNode({
 
           {/* Nút Cấu hình Chi tiết */}
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             onClick={onEdit}
@@ -184,12 +236,13 @@ export function SortableCategoryNode({
           </Button>
 
           {/* Nút Xóa */}
-          {canDelete && !isLocked && (
+          {canDelete && !isLocked && articleCount === 0 && (
             <Button
+              type="button"
               variant="ghost"
               size="icon"
-              onClick={onDelete}
-              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+              onClick={handleDeleteClick}
+              className="h-8 w-8 text-muted-foreground cursor-pointer hover:text-destructive hover:bg-destructive/10"
               title="Xóa danh mục này"
             >
               <Trash2 className="h-4 w-4" />

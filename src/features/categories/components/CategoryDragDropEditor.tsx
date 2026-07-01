@@ -38,21 +38,31 @@ interface CategoryDragDropEditorProps {
 function flattenTree(nodes: CategoryTreeNode[], parentId: string | null = null, depth: number = 1): FlatCategoryNode[] {
   let result: FlatCategoryNode[] = []
   nodes.forEach((node) => {
-    const { children, ...rest } = node
+    // Lấy thông tin hiển thị từ bản dịch Tiếng Việt (vi) tương tự như useCategoryTree
+    const viTrans = node.translations?.vi || {}
+    const name = viTrans.name || node.name || 'Chưa đặt tên'
+    const slug = viTrans.slug || node.slug || ''
+    const description = viTrans.description || node.description || null
+
     result.push({
-      id: rest.id,
+      id: node.id,
       parent_id: parentId,
-      name: rest.name,
-      slug: rest.slug,
-      description: rest.description,
-      sort_order: rest.sort_order,
-      status: rest.status,
-      is_visible: rest.is_visible,
+      name,
+      slug,
+      description,
+      sort_order: node.sort_order,
+      status: node.status,
+      is_visible: node.is_visible,
       depth,
-      children_count: children ? children.length : 0,
+      children_count: node.children ? node.children.length : 0,
+      is_weekly_schedule: node.is_weekly_schedule === true,
+      is_locked: node.is_locked === true,
+      article_count: node.article_count ?? 0,
+      is_translated: node.is_translated,
+      translations: node.translations,
     })
-    if (children && children.length > 0) {
-      result = result.concat(flattenTree(children, node.id, depth + 1))
+    if (node.children && node.children.length > 0) {
+      result = result.concat(flattenTree(node.children, node.id, depth + 1))
     }
   })
   return result
@@ -199,11 +209,16 @@ export function CategoryDragDropEditor({
       refetchTree()
     },
     onError: (error: any) => {
-      const errorCode = error?.response?.data?.error_code
+      const errResponse = error?.response?.data
+      const errorCode = errResponse?.error_code || errResponse?.error?.code
+      const errMessage = errResponse?.message || errResponse?.error?.message
+      
       if (errorCode === 'CATEGORY_HAS_CHILDREN') {
         toast.error('Không thể xóa danh mục này vì đang chứa danh mục con. Vui lòng di chuyển hoặc xóa các danh mục con trước.')
+      } else if (errorCode === 'CATEGORY_HAS_ACTIVE_ARTICLES') {
+        toast.error(errMessage || 'Không thể xóa danh mục đang có bài viết hoạt động.')
       } else {
-        toast.error('Không thể xóa danh mục.')
+        toast.error(errMessage || 'Không thể xóa danh mục.')
       }
     },
   })
@@ -607,6 +622,8 @@ export function CategoryDragDropEditor({
                       }}
                       onAddChild={() => createMutation.mutate(item.id)}
                       isLocked={item.is_locked}
+                      articleCount={item.article_count}
+                      isTranslated={item.is_translated}
                     />
                   )
                 })}
@@ -626,6 +643,8 @@ export function CategoryDragDropEditor({
                     onEdit={() => {}}
                     onDelete={() => {}}
                     isLocked={activeItem.is_locked}
+                    articleCount={activeItem.article_count}
+                    isTranslated={activeItem.is_translated}
                   />
                 </div>
               ) : null}

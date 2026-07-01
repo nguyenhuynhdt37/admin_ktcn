@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { categoryService } from '../services/categoryService'
@@ -7,25 +7,36 @@ import type { CategoryTreeNode, FlatCategoryNode, CategoryReorderItem } from '..
 
 // ── Helpers ──
 
-/** Làm phẳng cây thành flat list có depth */
+/** Làm phẳng cây thành flat list có depth và lấy thông tin hiển thị từ translations.vi */
 export function flattenTree(
   nodes: CategoryTreeNode[],
   parentId: string | null = null,
-  depth: number = 0
+  depth: number = 1
 ): FlatCategoryNode[] {
   let result: FlatCategoryNode[] = []
   nodes.forEach((node) => {
+    // Lấy thông tin hiển thị mặc định từ bản dịch Tiếng Việt (vi)
+    const viTrans = node.translations?.vi || {}
+    const name = viTrans.name || node.name || 'Chưa đặt tên'
+    const slug = viTrans.slug || node.slug || ''
+    const description = viTrans.description || node.description || null
+
     result.push({
       id: node.id,
       parent_id: parentId,
-      name: node.name,
-      slug: node.slug,
-      description: node.description,
+      name,
+      slug,
+      description,
       sort_order: node.sort_order,
       status: node.status,
       is_visible: node.is_visible,
       depth,
       children_count: node.children?.length ?? 0,
+      is_weekly_schedule: node.is_weekly_schedule === true,
+      is_locked: node.is_locked === true,
+      article_count: node.article_count ?? 0,
+      is_translated: node.is_translated,
+      translations: node.translations,
     })
     if (node.children && node.children.length > 0) {
       result = result.concat(flattenTree(node.children, node.id, depth + 1))
@@ -34,7 +45,7 @@ export function flattenTree(
   return result
 }
 
-/** Tìm tất cả descendant IDs của một node (để chặn kéo vào chính con/cháu) */
+/** Tìm tất cả descendant IDs của một node */
 function getDescendantIds(flatItems: FlatCategoryNode[], nodeId: string): Set<string> {
   const descendants = new Set<string>()
   const queue = [nodeId]
@@ -100,7 +111,7 @@ export function useCategoryTree() {
     })
   }, [])
 
-  // Xử lý drag end — tính lại parent_id + sort_order
+  // Xử lý drag end
   const handleDragEnd = useCallback(
     (activeId: string, overId: string) => {
       if (activeId === overId) return
@@ -109,24 +120,20 @@ export function useCategoryTree() {
       const newIndex = flatItems.findIndex((i) => i.id === overId)
       if (oldIndex === -1 || newIndex === -1) return
 
-      // Chặn kéo node vào chính con/cháu
       const descendants = getDescendantIds(flatItems, activeId)
       if (descendants.has(overId)) {
         toast.error('Không thể đặt danh mục cha làm con của danh mục con.')
         return
       }
 
-      // Di chuyển item
       const updated = [...flatItems]
       const [moved] = updated.splice(oldIndex, 1)
       updated.splice(newIndex, 0, moved)
 
-      // Tính lại parent_id: item nhận cùng parent_id với item mà nó đang nằm kề phía trên
       const overItem = flatItems[newIndex]
       moved.parent_id = overItem.parent_id
       moved.depth = overItem.depth
 
-      // Tính lại sort_order cho tất cả siblings cùng parent
       let sortCounter = 0
       updated.forEach((item) => {
         if (item.parent_id === moved.parent_id) {
@@ -163,12 +170,11 @@ export function useCategoryTree() {
       } else {
         toast.error('Lưu thứ tự thất bại. Vui lòng thử lại.')
       }
-      // Reset về dữ liệu gốc
       refetchTree()
     },
   })
 
-  // Invalidate queries (dùng sau khi create/update/delete)
+  // Invalidate queries
   const invalidateTree = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['category-tree'] })
     queryClient.invalidateQueries({ queryKey: ['categories-list'] })

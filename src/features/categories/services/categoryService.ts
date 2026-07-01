@@ -50,11 +50,12 @@ export const categoryService = {
   },
 
   /** Kiểm tra trùng lặp slug và lấy gợi ý */
-  checkSlug: async (slug: string, excludeId?: string | null): Promise<{ exists: boolean; suggested_slug: string }> => {
+  checkSlug: async (slug: string, excludeId?: string | null, lang: string = 'vi'): Promise<{ exists: boolean; suggested_slug: string }> => {
     const response = await httpClient.get('/categories/check-slug', {
       params: {
         slug,
         exclude_id: excludeId || undefined,
+        lang,
       },
     })
     return response.data

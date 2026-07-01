@@ -1,263 +1,77 @@
 /* eslint-disable */
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Save, X, Loader2, Camera, Trash2 } from 'lucide-react'
+import { Languages, Globe, Camera, Trash2, ShieldCheck, HelpCircle, Save } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
 import { Switch } from '@/shared/components/ui/switch'
-import { httpClient } from '@/services/http/client'
-import { cn } from '../../../lib/utils'
-import { categoryService } from '../services/categoryService'
+import { cn } from '@/lib/utils'
 import { CategorySEOSection } from './CategorySEOSection'
-import type { CategoryStatus } from '../types'
 import { useAuth } from '@/app/providers/AuthProvider'
+import { useCategoryForm, INITIAL_TRANSLATION } from '../hooks/useCategoryForm'
 
 interface CategoryFormPanelProps {
+  mode: 'create' | 'edit'
   selectedCategoryId: string
+  createParentId: string | null
   onClose: () => void
   refetchTree: () => void
-}
-
-interface FormState {
-  name: string
-  slug: string
-  description: string
-  parent_id: string | null
-  status: CategoryStatus
-  is_visible: boolean
-  thumbnail_id: string | null
-  seo_title: string
-  seo_description: string
-  seo_keywords: string
-  seo_canonical: string
-  seo_robots: string
-  seo_og_image_id: string | null
-  is_weekly_schedule: boolean
-}
-
-const INITIAL_FORM: FormState = {
-  name: '',
-  slug: '',
-  description: '',
-  parent_id: null,
-  status: 'ACTIVE',
-  is_visible: true,
-  thumbnail_id: null,
-  seo_title: '',
-  seo_description: '',
-  seo_keywords: '',
-  seo_canonical: '',
-  seo_robots: 'index, follow',
-  seo_og_image_id: null,
-  is_weekly_schedule: false,
+  onSelectCreatedItem: (id: string) => void
 }
 
 export function CategoryFormPanel({
+  mode,
   selectedCategoryId,
+  createParentId,
   onClose,
   refetchTree,
+  onSelectCreatedItem,
 }: CategoryFormPanelProps) {
   const { hasPermission } = useAuth()
   const canUpdate = hasPermission('category.update')
+  const canCreate = hasPermission('category.create')
 
-  const queryClient = useQueryClient()
-  const [form, setForm] = useState<FormState>(INITIAL_FORM)
-
-  // Lấy chi tiết category
-  const { data: categoryDetail, isLoading: isLoadingDetail, isError } = useQuery({
-    queryKey: ['category-detail', selectedCategoryId],
-    queryFn: () => categoryService.getCategory(selectedCategoryId),
-    enabled: !!selectedCategoryId,
+  // Sử dụng custom hook đóng gói toàn bộ logic
+  const {
+    form,
+    activeTab,
+    setActiveTab,
+    isTranslating,
+    showValidationErrors,
+    isLoadingDetail,
+    isError,
+    categoryDetail,
+    handleFieldChange,
+    handleTranslationChange,
+    handleAutoTranslate,
+    isUploadingThumbnail,
+    thumbnailUrl,
+    thumbnailInputRef,
+    handleThumbnailUpload,
+    handleThumbnailRemove,
+    slugCheck,
+    isTabComplete,
+    isFormValid,
+    handleSubmit,
+    saveMutation,
+  } = useCategoryForm({
+    mode,
+    selectedCategoryId,
+    createParentId,
+    refetchTree,
+    onSelectCreatedItem,
   })
 
-  // Đổ dữ liệu vào form khi nhận được detail
-  useEffect(() => {
-    if (categoryDetail) {
-      setForm({
-        name: categoryDetail.name || '',
-        slug: categoryDetail.slug || '',
-        description: categoryDetail.description || '',
-        parent_id: categoryDetail.parent_id,
-        status: ((categoryDetail.status || 'ACTIVE').toUpperCase() as CategoryStatus) || 'ACTIVE',
-        is_visible: categoryDetail.is_visible !== false,
-        thumbnail_id: categoryDetail.thumbnail_id || null,
-        seo_title: categoryDetail.seo_title || '',
-        seo_description: categoryDetail.seo_description || '',
-        seo_keywords: categoryDetail.seo_keywords || '',
-        seo_canonical: categoryDetail.seo_canonical || '',
-        seo_robots: categoryDetail.seo_robots || 'index, follow',
-        seo_og_image_id: categoryDetail.seo_og_image_id || null,
-        is_weekly_schedule: categoryDetail.is_weekly_schedule === true,
-      })
-    }
-  }, [categoryDetail])
-
-  // SEO field change handler
-  const handleFieldChange = useCallback(
-    (field: keyof FormState, value: any) => {
-      setForm((prev) => ({ ...prev, [field]: value }))
-    },
-    []
-  )
-
-  // Thumbnail Image states and handlers (moved out of SEO section)
-  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
-  const thumbnailInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    const fetchThumbnailUrl = async () => {
-      if (form.thumbnail_id) {
-        try {
-          const res = await httpClient.get<{ url: string }>(`/media/${form.thumbnail_id}/url`)
-          setThumbnailUrl(res.data.url)
-        } catch {
-          setThumbnailUrl(null)
-        }
-      } else {
-        setThumbnailUrl(null)
-      }
-    }
-    fetchThumbnailUrl()
-  }, [form.thumbnail_id])
-
-  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setIsUploadingThumbnail(true)
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-      const { data } = await httpClient.post<{ id: string; name: string }>('/media/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      const urlRes = await httpClient.get<{ url: string }>(`/media/${data.id}/url`)
-      setForm((prev) => ({ ...prev, thumbnail_id: data.id }))
-      setThumbnailUrl(urlRes.data.url)
-      toast.success('Đã tải lên ảnh đại diện danh mục!')
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || 'Tải ảnh lên thất bại')
-    } finally {
-      setIsUploadingThumbnail(false)
-    }
-  }
-
-  const handleThumbnailRemove = () => {
-    setForm((prev) => ({ ...prev, thumbnail_id: null }))
-    setThumbnailUrl(null)
-    toast.success('Đã gỡ bỏ hình ảnh đại diện.')
-  }
-
-  // ─── DEBOUNCE CHECK SLUG REALTIME ───
-  const [slugCheck, setSlugCheck] = useState<{
-    isChecking: boolean
-    exists: boolean
-    suggested: string | null
-  }>({
-    isChecking: false,
-    exists: false,
-    suggested: null,
-  })
-
-  useEffect(() => {
-    if (!form.slug || form.slug.trim() === '') {
-      setSlugCheck({ isChecking: false, exists: false, suggested: null })
-      return
-    }
-
-    // Nếu slug trùng với slug hiện tại của danh mục đang chỉnh sửa thì không báo trùng
-    if (categoryDetail && form.slug === categoryDetail.slug) {
-      setSlugCheck({ isChecking: false, exists: false, suggested: null })
-      return
-    }
-
-    setSlugCheck((prev) => ({ ...prev, isChecking: true }))
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await categoryService.checkSlug(form.slug, selectedCategoryId)
-        setSlugCheck({
-          isChecking: false,
-          exists: res.exists,
-          suggested: res.exists ? res.suggested_slug : null,
-        })
-      } catch {
-        setSlugCheck({ isChecking: false, exists: false, suggested: null })
-      }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [form.slug, selectedCategoryId, categoryDetail])
-
-  // Xử lý lỗi API
-  const handleApiError = (error: any, defaultMsg: string) => {
-    const errorCode = error?.response?.data?.error_code
-    const errorMap: Record<string, string> = {
-      CIRCULAR_REFERENCE: 'Không thể gán danh mục cha làm con của chính nó hoặc danh mục con của nó.',
-      CATEGORY_HAS_CHILDREN: 'Không thể xóa danh mục này vì đang chứa danh mục con. Vui lòng xóa các danh mục con trước.',
-      CATEGORY_NOT_FOUND: 'Danh mục không tồn tại hoặc đã bị xóa.',
-      AI_BUDGET_EXCEEDED: 'Hạn mức AI tháng của hệ thống đã dùng hết.',
-    }
-    toast.error(errorMap[errorCode] || error?.response?.data?.message || defaultMsg)
-  }
-
-  // Mutation cập nhật
-  const updateMutation = useMutation({
-    mutationFn: () =>
-      categoryService.updateCategory(selectedCategoryId, {
-        name: form.name,
-        slug: form.slug,
-        description: form.description || null,
-        parent_id: form.parent_id,
-        status: form.status,
-        is_visible: form.is_visible,
-        thumbnail_id: form.thumbnail_id,
-        seo_title: form.seo_title || null,
-        seo_description: form.seo_description || null,
-        seo_keywords: form.seo_keywords || null,
-        seo_canonical: form.seo_canonical || null,
-        seo_robots: form.seo_robots || null,
-        seo_og_image_id: form.seo_og_image_id,
-        is_weekly_schedule: form.is_weekly_schedule,
-      }),
-    onSuccess: (updated) => {
-      toast.success(`Đã cập nhật danh mục "${updated.name}" thành công!`)
-      refetchTree()
-      queryClient.invalidateQueries({ queryKey: ['category-tree'] })
-      queryClient.invalidateQueries({ queryKey: ['categories-list'] })
-      queryClient.invalidateQueries({ queryKey: ['category-detail', selectedCategoryId] })
-    },
-    onError: (error: any) => handleApiError(error, 'Cập nhật danh mục thất bại.'),
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.name.trim()) {
-      toast.error('Vui lòng nhập tên danh mục.')
-      return
-    }
-    if (!canUpdate) {
-      toast.error('Bạn không có quyền cập nhật danh mục.')
-      return
-    }
-    updateMutation.mutate()
-  }
-
-  if (isLoadingDetail) {
+  if (mode === 'edit' && isLoadingDetail) {
     return (
       <div className="flex h-48 flex-col items-center justify-center gap-2 border border-dashed rounded-xl bg-muted/10">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="text-xs text-muted-foreground">Đang tải cấu hình...</span>
+        <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="text-xs text-muted-foreground font-medium">Đang tải cấu hình...</span>
       </div>
     )
   }
 
-  if (isError || !categoryDetail) {
+  if (mode === 'edit' && (isError || !categoryDetail)) {
     return (
       <div className="p-6 text-center text-sm text-destructive border border-dashed rounded-xl bg-destructive/5">
         Không thể tải thông tin danh mục. Vui lòng thử lại.
@@ -265,238 +79,318 @@ export function CategoryFormPanel({
     )
   }
 
+  const activeTranslation = form.translations?.[activeTab] || INITIAL_TRANSLATION
+
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-180px)] bg-card rounded-xl border border-border shadow-xs max-w-[500px] w-full ml-auto overflow-hidden">
-      {/* Header Panel (Chỉ hiển thị tên danh mục) */}
-      <div className="flex items-center justify-between border-b p-4 shrink-0">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-foreground text-sm truncate">
-            {categoryDetail.name}
-          </h3>
+    <div className="flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-180px)] bg-card rounded-xl border border-border shadow-md max-w-[500px] w-full ml-auto overflow-hidden relative">
+      
+      {/* Lớp overlay khóa màn hình trong lúc dịch */}
+      {isTranslating && (
+        <div className="absolute inset-0 bg-background/60 z-50 flex flex-col items-center justify-center gap-2.5 backdrop-blur-xs">
+          <div className="relative flex items-center justify-center">
+            <span className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <Languages className="h-4 w-4 text-primary absolute" />
+          </div>
+          <span className="text-xs font-bold text-foreground animate-pulse">
+            Đang dịch tự động sang các ngôn ngữ khác...
+          </span>
+        </div>
+      )}
+
+      {/* Header Panel */}
+      <div className="flex items-center justify-between border-b p-4 shrink-0 bg-muted/5">
+        <div className="min-w-0 flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Languages className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-bold text-foreground text-sm truncate leading-snug">
+              {mode === 'create' ? 'Tạo danh mục mới' : 'Chỉnh sửa danh mục'}
+            </h3>
+            {mode === 'edit' && (
+              <p className="text-[10px] text-muted-foreground truncate max-w-[340px]">
+                {categoryDetail?.translations?.vi?.name || categoryDetail?.name}
+              </p>
+            )}
+          </div>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 cursor-pointer rounded-full"
+          className="h-8 w-8 cursor-pointer rounded-full hover:bg-muted"
         >
-          <X className="h-4 w-4" />
+          <span className="text-sm font-semibold">✕</span>
         </Button>
       </div>
 
       {/* Form cấu hình - Cuộn độc lập */}
-      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Tên danh mục */}
-        <div className="space-y-1.5">
-          <Label htmlFor="cat_name" className="text-xs font-semibold text-foreground/80">
-            Tên danh mục <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="cat_name"
-            value={form.name}
-            onChange={(e) => handleFieldChange('name', e.target.value)}
-            placeholder="VD: Tin tức nổi bật"
-            disabled={!canUpdate}
-            className="h-9"
-          />
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-5">
+        
+        {/* ─── KHỐI 1: THÔNG TIN ĐA NGÔN NGỮ (Translations level) ─── */}
+        <div className="space-y-4 border border-border/85 p-4 rounded-xl bg-card shadow-xs relative">
+          <div className="flex items-center justify-between border-b pb-2 shrink-0">
+            <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Globe className="h-4 w-4 text-primary" />
+              <span>Nội dung Đa Ngôn Ngữ</span>
+            </div>
+            {activeTab === 'vi' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 border-primary/40 text-[10px] px-2.5 text-primary hover:bg-primary/5 cursor-pointer shrink-0"
+                onClick={handleAutoTranslate}
+                disabled={isTranslating || !form.translations?.vi?.name?.trim()}
+              >
+                <Languages className="h-3 w-3 mr-1" /> Dịch tự động
+              </Button>
+            )}
+          </div>
+
+          {/* Tabs Selector đa ngôn ngữ thiết kế CMS */}
+          <div className="flex border-b border-border bg-muted/20 rounded-lg p-1 gap-1">
+            {[
+              { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+              { code: 'en', label: 'Tiếng Anh', flag: '🇬🇧' },
+            ].map((tab) => {
+              const isTabDone = isTabComplete(tab.code as any)
+              return (
+                <button
+                  key={tab.code}
+                  type="button"
+                  onClick={() => setActiveTab(tab.code as any)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold transition-all cursor-pointer relative",
+                    activeTab === tab.code
+                      ? "bg-card text-foreground shadow-xs border"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  )}
+                >
+                  <span>{tab.flag}</span>
+                  <span>{tab.label}</span>
+                  {/* Chấm đỏ báo lỗi/cảnh báo thiếu trường trực quan */}
+                  {!isTabDone && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse absolute -top-0.5 -right-0.5" title="Chưa hoàn thiện bản dịch" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Các trường nhập của tab hiện tại */}
+          <div className="space-y-4 pt-1">
+            {/* Tên danh mục */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="cat_name" className="text-xs font-semibold text-foreground/80 flex items-center gap-1">
+                  Tên danh mục <span className="text-destructive">*</span>
+                </Label>
+              </div>
+              <Input
+                id="cat_name"
+                value={activeTranslation.name}
+                onChange={(e) => handleTranslationChange(activeTab, 'name', e.target.value)}
+                placeholder={activeTab === 'vi' ? 'Nhập tên danh mục (ví dụ: Cơ cấu tổ chức)' : 'Category Name'}
+                className={cn(
+                  "h-9 text-xs focus-visible:ring-1 focus-visible:ring-primary/80",
+                  showValidationErrors && !activeTranslation.name.trim() && "border-destructive/80 focus-visible:ring-destructive/80"
+                )}
+              />
+            </div>
+
+            {/* Đường dẫn Slug */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="cat_slug" className="text-xs font-semibold text-foreground/80 flex items-center gap-1">
+                  Đường dẫn (Slug) <span className="text-destructive">*</span>
+                </Label>
+                {slugCheck.isChecking && (
+                  <span className="text-[10px] text-muted-foreground animate-pulse">Đang check...</span>
+                )}
+              </div>
+              <Input
+                id="cat_slug"
+                value={activeTranslation.slug}
+                onChange={(e) => handleTranslationChange(activeTab, 'slug', e.target.value)}
+                placeholder="co-cau-to-chuc"
+                className={cn(
+                  "h-9 text-xs font-mono focus-visible:ring-1 focus-visible:ring-primary/80",
+                  showValidationErrors && !activeTranslation.slug.trim() && "border-destructive/80 focus-visible:ring-destructive/80",
+                  slugCheck.exists && "border-amber-500/80 bg-amber-500/5 focus-visible:ring-amber-500/80 text-amber-600"
+                )}
+              />
+              {/* Cảnh báo trùng lặp slug hoặc backend sinh slug mới */}
+              {slugCheck.exists && (
+                <div className="text-[10px] text-amber-600 font-semibold bg-amber-500/10 px-2 py-1 rounded-sm border border-amber-500/20 leading-relaxed">
+                  ⚠️ Slug đã tồn tại. Backend sẽ tự động đồng bộ sang dạng:{' '}
+                  <span className="underline font-mono">{slugCheck.suggested}</span> khi bạn lưu cấu hình.
+                </div>
+              )}
+            </div>
+
+            {/* Mô tả ngắn */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cat_desc" className="text-xs font-semibold text-foreground/80">
+                Mô tả ngắn
+              </Label>
+              <Textarea
+                id="cat_desc"
+                value={activeTranslation.description}
+                onChange={(e) => handleTranslationChange(activeTab, 'description', e.target.value)}
+                placeholder="Nhập mô tả ngắn cho danh mục..."
+                className="min-h-[70px] text-xs resize-none focus-visible:ring-1 focus-visible:ring-primary/80"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Slug */}
-        <div className="space-y-1.5">
-          <Label htmlFor="cat_slug" className="text-xs font-semibold text-foreground/80">
-            Slug (URL)
-          </Label>
-          <div className="relative">
-            <Input
-              id="cat_slug"
-              value={form.slug}
-              onChange={(e) => handleFieldChange('slug', e.target.value)}
-              placeholder="tin-tuc-noi-bat"
-              disabled={!canUpdate}
-              className={cn(
-                "h-9 text-sm font-mono pr-8",
-                slugCheck.exists && "border-amber-500 focus-visible:ring-amber-500 bg-amber-500/5 text-amber-900"
-              )}
+        {/* ─── KHỐI 2: META SEO PREVIEW & ADVANCED SEO SECTION ─── */}
+        <CategorySEOSection
+          activeTab={activeTab}
+          seoTitle={activeTranslation.seo_title}
+          seoDescription={activeTranslation.seo_description}
+          name={activeTranslation.name}
+          description={activeTranslation.description}
+        />
+
+        {/* ─── KHỐI 3: THÔNG TIN CHUNG (Root level settings) ─── */}
+        <div className="space-y-4 border border-border/85 p-4 rounded-xl bg-card shadow-xs">
+          <div className="text-xs font-bold text-foreground border-b pb-2 flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <span>Cấu hình Hệ thống</span>
+          </div>
+
+          {/* Thumbnail Upload */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-foreground/80">Ảnh đại diện (Thumbnail)</Label>
+            <input
+              type="file"
+              accept="image/*"
+              ref={thumbnailInputRef}
+              onChange={handleThumbnailUpload}
+              className="hidden"
             />
-            {slugCheck.isChecking && (
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            
+            {thumbnailUrl ? (
+              <div className="group relative h-28 w-full border rounded-lg overflow-hidden bg-muted/20">
+                <img src={thumbnailUrl} alt="Thumbnail" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-7 text-[10px] cursor-pointer"
+                    onClick={() => thumbnailInputRef.current?.click()}
+                  >
+                    Thay đổi
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="h-7 text-[10px] cursor-pointer"
+                    onClick={handleThumbnailRemove}
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => thumbnailInputRef.current?.click()}
+                className="h-28 w-full border border-dashed rounded-lg flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:bg-muted/30 transition-all text-muted-foreground hover:text-foreground"
+              >
+                {isUploadingThumbnail ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                ) : (
+                  <Camera className="h-5 w-5 opacity-70" />
+                )}
+                <span className="text-[10px] font-semibold">Tải ảnh lên (Khuyên dùng: 1:1, JPG/PNG)</span>
               </div>
             )}
           </div>
-          {slugCheck.exists && (
-            <div className="text-[11px] text-amber-700 bg-amber-50/50 p-2 rounded border border-amber-200/60 mt-1 space-y-1.5 leading-normal">
-              <p className="flex items-center gap-1 font-semibold">
-                ⚠️ Slug này đã tồn tại trong hệ thống (kể cả đã xóa mềm).
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setForm((prev) => ({ ...prev, slug: slugCheck.suggested || '' }))
-                  setSlugCheck({ isChecking: false, exists: false, suggested: null })
-                }}
-                className="text-primary hover:underline block text-left font-semibold cursor-pointer"
-              >
-                👉 Sử dụng gợi ý: <span className="font-mono bg-primary/10 px-1 py-0.5 rounded text-xs">{slugCheck.suggested}</span>
-              </button>
+
+          {/* Status Switch (Active / Inactive) */}
+          <div className="flex items-center justify-between border-b pb-3 pt-1">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold text-foreground">Trạng thái Hoạt động</Label>
+              <p className="text-[10px] text-muted-foreground">Bật danh mục để hiển thị trên Portal và cho phép gán bài viết.</p>
             </div>
-          )}
-        </div>
-
-        {/* Mô tả */}
-        <div className="space-y-1.5">
-          <Label htmlFor="cat_desc" className="text-xs font-semibold text-foreground/80">
-            Mô tả ngắn
-          </Label>
-          <Textarea
-            id="cat_desc"
-            value={form.description}
-            onChange={(e) => handleFieldChange('description', e.target.value)}
-            placeholder="Mô tả ngắn gọn về danh mục này..."
-            disabled={!canUpdate}
-            className="min-h-[80px] resize-none text-sm"
-          />
-        </div>
-
-        {/* Ảnh đại diện (đã dời ra khỏi SEO) */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-foreground/80">Ảnh đại diện</Label>
-          <div className="relative border border-border/80 rounded-lg aspect-video max-w-[240px] bg-muted/20 flex flex-col items-center justify-center overflow-hidden hover:border-primary/50 transition-colors group">
-            {thumbnailUrl ? (
-              <>
-                <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                {canUpdate && (
-                  <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm gap-2">
-                    <span className="text-xs font-semibold">Thay đổi ảnh</span>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="h-7 text-[10px] px-2.5"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleThumbnailRemove()
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" /> Gỡ ảnh
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => thumbnailInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-4 text-center cursor-pointer text-xs text-muted-foreground w-full h-full"
-                disabled={isUploadingThumbnail || !canUpdate}
-              >
-                {isUploadingThumbnail ? (
-                  <Loader2 className="h-5 w-5 animate-spin mb-1.5 text-primary" />
-                ) : (
-                  <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
-                    <Camera className="h-6 w-6" />
-                    <span className="text-xs font-medium">Tải ảnh lên</span>
-                  </div>
-                )}
-              </button>
-            )}
+            <Switch
+              checked={form.status === 'ACTIVE'}
+              onCheckedChange={(checked) => handleFieldChange('status', checked ? 'ACTIVE' : 'INACTIVE')}
+              className="cursor-pointer"
+            />
           </div>
-          <input
-            type="file"
-            ref={thumbnailInputRef}
-            accept="image/*"
-            className="hidden"
-            onChange={handleThumbnailUpload}
-          />
-        </div>
 
+          {/* Cấu hình nâng cao Switches */}
+          <div className="space-y-3 pt-1">
+            {/* Hiển thị trên Menu */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Label className="text-xs font-semibold text-foreground/80 cursor-pointer">Hiển thị công khai</Label>
+                <HelpCircle className="h-3 w-3 text-muted-foreground" title="Bật để hiển thị công khai danh mục trên trang chính" />
+              </div>
+              <Switch
+                checked={form.is_visible}
+                onCheckedChange={(checked) => handleFieldChange('is_visible', checked)}
+                className="scale-90 cursor-pointer"
+              />
+            </div>
 
-        {/* Trạng thái */}
-        <div className="space-y-1.5">
-          <Label htmlFor="cat_status" className="text-xs font-semibold text-foreground/80">
-            Trạng thái
-          </Label>
-          <select
-            id="cat_status"
-            value={form.status}
-            disabled={!canUpdate}
-            onChange={(e) => handleFieldChange('status', e.target.value as CategoryStatus)}
-            className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
-          >
-            <option value="ACTIVE" className="bg-popover text-popover-foreground">Hoạt động</option>
-            <option value="DRAFT" className="bg-popover text-popover-foreground">Nháp</option>
-            <option value="INACTIVE" className="bg-popover text-popover-foreground">Không hoạt động</option>
-          </select>
-        </div>
+            {/* Weekly Schedule */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Label className="text-xs font-semibold text-foreground/80 cursor-pointer">Lịch học tuần</Label>
+                <HelpCircle className="h-3 w-3 text-muted-foreground" title="Đánh dấu danh mục này dùng cho mục đích xếp lịch học tuần" />
+              </div>
+              <Switch
+                checked={form.is_weekly_schedule}
+                onCheckedChange={(checked) => handleFieldChange('is_weekly_schedule', checked)}
+                className="scale-90 cursor-pointer"
+              />
+            </div>
 
-        {/* Hiển thị */}
-        <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2.5">
-          <Label htmlFor="cat_visible" className="cursor-pointer text-sm font-semibold text-foreground/80">
-            Hiển thị trên website
-          </Label>
-          <Switch
-            id="cat_visible"
-            checked={form.is_visible}
-            disabled={!canUpdate}
-            onCheckedChange={(checked) => handleFieldChange('is_visible', checked)}
-          />
-        </div>
-
-        {/* Danh mục Lịch tuần */}
-        <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2.5">
-          <div className="space-y-0.5">
-            <Label htmlFor="cat_weekly" className="cursor-pointer text-sm font-semibold text-foreground/80">
-              Danh mục Lịch tuần
-            </Label>
-            <p className="text-[10px] text-muted-foreground">
-              Đánh dấu danh mục hiển thị dạng bảng lịch tuần chuyên dụng
-            </p>
+            {/* Locked (System Category) */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Label className="text-xs font-semibold text-foreground/80 cursor-pointer">Khóa hệ thống (Khóa xóa)</Label>
+                <HelpCircle className="h-3 w-3 text-muted-foreground" title="Khóa danh mục này, ngăn không cho xóa để tránh lỗi logic hệ thống" />
+              </div>
+              <Switch
+                checked={form.is_locked}
+                onCheckedChange={(checked) => handleFieldChange('is_locked', checked)}
+                className="scale-90 cursor-pointer"
+              />
+            </div>
           </div>
-          <Switch
-            id="cat_weekly"
-            checked={form.is_weekly_schedule}
-            disabled={!canUpdate}
-            onCheckedChange={(checked) => handleFieldChange('is_weekly_schedule', checked)}
-          />
         </div>
-
-        {/* SEO & Cấu hình nâng cao Section (Accordion) */}
-        <CategorySEOSection
-          name={form.name}
-          description={form.description}
-          seoTitle={form.seo_title}
-          seoDescription={form.seo_description}
-          seoKeywords={form.seo_keywords}
-          seoCanonical={form.seo_canonical}
-          seoRobots={form.seo_robots}
-          seoOgImageId={form.seo_og_image_id}
-          thumbnailUrl={thumbnailUrl}
-          seoResolved={(categoryDetail as any)?.seo_resolved}
-          onChange={handleFieldChange}
-          disabled={!canUpdate}
-        />
       </form>
 
-      {/* Footer cố định không bị cuộn */}
-      <div className="p-4 border-t bg-card shrink-0 flex gap-2 w-full justify-end">
-        <Button type="button" variant="outline" onClick={onClose} className="h-9 text-xs">
-          Đóng
+      {/* Footer Buttons */}
+      <div className="border-t p-4 flex items-center justify-end gap-2 shrink-0 bg-muted/5">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="h-9 text-xs px-4 cursor-pointer hover:bg-muted"
+        >
+          Hủy
         </Button>
-        {canUpdate && (
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={updateMutation.isPending}
-            className="h-9 text-xs"
-          >
-            {updateMutation.isPending ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Lưu cấu hình
-          </Button>
-        )}
+        <Button
+          type="submit"
+          onClick={handleSubmit}
+          disabled={!isFormValid() || saveMutation.isPending}
+          className="h-9 text-xs px-4 bg-primary text-primary-foreground hover:bg-primary/95 cursor-pointer font-bold flex items-center gap-1.5"
+        >
+          {saveMutation.isPending ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+          ) : (
+            <Save className="h-3.5 w-3.5" />
+          )}
+          Lưu cấu hình
+        </Button>
       </div>
     </div>
   )
