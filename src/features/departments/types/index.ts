@@ -1,7 +1,12 @@
+export interface DepartmentTranslation {
+  name: string
+  description: string | null
+  slug?: string
+}
+
 export interface Department {
   id: string
   name: string
-  english_name: string | null
   slug: string
   description: string | null
   thumbnail_object_key: string | null
@@ -12,36 +17,38 @@ export interface Department {
   sort_order: number
   is_active: boolean
   staff_count: number
+  is_translated: Record<string, boolean>
+  translations: Record<string, DepartmentTranslation>
   created_at: string
   updated_at: string
 }
 
 export interface CreateDepartmentPayload {
-  name: string
-  english_name?: string | null
-  description?: string | null
+  thumbnail_object_key: string
   phone?: string | null
   email?: string | null
   website?: string | null
   office?: string | null
   sort_order?: number
   is_active?: boolean
+  translations: Record<string, {
+    name: string
+    description?: string | null
+  }>
 }
 
 export interface UpdateDepartmentPayload {
-  name?: string
-  english_name?: string | null
-  description?: string | null
+  thumbnail_object_key: string
   phone?: string | null
   email?: string | null
   website?: string | null
   office?: string | null
   sort_order?: number
   is_active?: boolean
-}
-
-export interface UpdateDepartmentStatusPayload {
-  is_active: boolean
+  translations?: Record<string, {
+    name: string
+    description?: string | null
+  }>
 }
 
 export interface DepartmentPagination {

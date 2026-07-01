@@ -1,33 +1,37 @@
+export interface PositionTranslation {
+  name: string
+  description: string | null
+}
+
 export interface Position {
   id: string
   name: string
-  english_name: string | null
   description: string | null
   sort_order: number
   is_active: boolean
   staff_count: number
+  is_translated: Record<string, boolean>
+  translations: Record<string, PositionTranslation>
   created_at: string
   updated_at: string
 }
 
 export interface CreatePositionPayload {
-  name: string
-  english_name?: string | null
-  description?: string | null
   sort_order?: number
   is_active?: boolean
+  translations: Record<string, {
+    name: string
+    description?: string | null
+  }>
 }
 
 export interface UpdatePositionPayload {
-  name?: string
-  english_name?: string | null
-  description?: string | null
   sort_order?: number
   is_active?: boolean
-}
-
-export interface UpdatePositionStatusPayload {
-  is_active: boolean
+  translations?: Record<string, {
+    name: string
+    description?: string | null
+  }>
 }
 
 export interface PositionPagination {
@@ -44,7 +48,6 @@ export interface PositionStats {
   total: number
   active: number
   inactive: number
-  total_staff: number
 }
 
 export interface PositionListParams {

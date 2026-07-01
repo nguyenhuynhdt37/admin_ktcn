@@ -7,9 +7,9 @@ import {
   ShieldAlert
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
 import { Checkbox } from '@/shared/components/ui/checkbox'
 import { Switch } from '@/shared/components/ui/switch'
+import { Badge } from '@/shared/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 import type { Position } from '../types'
 
 interface PositionColumnsProps {
@@ -56,12 +57,49 @@ export const getPositionColumns = ({
   {
     accessorKey: 'name',
     header: 'Tên chức vụ',
-    cell: ({ row }) => <span className="font-semibold text-xs text-foreground">{row.original.name}</span>,
-  },
-  {
-    accessorKey: 'english_name',
-    header: 'Tên tiếng Anh',
-    cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.english_name || '-'}</span>,
+    cell: ({ row }) => {
+      const item = row.original
+      const enName = item.translations?.en?.name
+
+      return (
+        <div className="flex flex-col gap-1 max-w-[220px]">
+          <span className="font-semibold text-xs text-foreground leading-normal truncate" title={item.name}>
+            {item.name}
+          </span>
+          {enName && (
+            <span className="text-[10px] text-muted-foreground leading-normal truncate" title={enName}>
+              {enName}
+            </span>
+          )}
+          
+          {/* Badge ngôn ngữ dịch thuật VI / EN */}
+          <div className="flex items-center gap-1.5 shrink-0 mt-1">
+            <span 
+              className={cn(
+                "text-[8px] font-bold px-1 rounded-sm border select-none tracking-wider scale-90 origin-left",
+                item.is_translated?.vi 
+                  ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20" 
+                  : "bg-destructive/15 text-destructive border-destructive/20"
+              )}
+              title={item.is_translated?.vi ? "Đã dịch Tiếng Việt" : "Chưa dịch Tiếng Việt"}
+            >
+              VI
+            </span>
+            <span 
+              className={cn(
+                "text-[8px] font-bold px-1 rounded-sm border select-none tracking-wider scale-90 origin-left",
+                item.is_translated?.en 
+                  ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20" 
+                  : "bg-destructive/15 text-destructive border-destructive/20"
+              )}
+              title={item.is_translated?.en ? "Đã dịch Tiếng Anh" : "Chưa dịch Tiếng Anh"}
+            >
+              EN
+            </span>
+          </div>
+        </div>
+      )
+    },
   },
   {
     accessorKey: 'description',
@@ -141,9 +179,8 @@ export const getPositionColumns = ({
                   <TooltipTrigger asChild>
                     <span className="w-full block">
                       <DropdownMenuItem
-                        disabled={hasStaff}
-                        className={`text-xs w-full ${hasStaff ? 'text-muted-foreground/60 cursor-not-allowed opacity-50' : 'cursor-pointer text-destructive focus:bg-destructive/10'}`}
-                        onClick={() => !hasStaff && onDelete(position.id)}
+                        className="cursor-pointer text-xs w-full text-destructive focus:bg-destructive/10"
+                        onClick={() => onDelete(position.id)}
                       >
                         <Trash2 className="mr-2 h-3.5 w-3.5" />
                         <span>Xóa chức vụ</span>
@@ -154,7 +191,7 @@ export const getPositionColumns = ({
                     <TooltipContent side="left" className="text-xs bg-amber-50 text-amber-800 border border-amber-200 shadow-sm max-w-[200px] leading-relaxed">
                       <div className="flex items-start gap-1">
                         <ShieldAlert className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <span>Không thể xóa chức vụ đang được gán cho giảng viên.</span>
+                        <span>Chú ý: Chức vụ có {position.staff_count} giảng viên. Không thể xóa khi chưa chuyển chức vụ của họ.</span>
                       </div>
                     </TooltipContent>
                   )}

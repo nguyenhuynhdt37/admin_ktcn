@@ -12,6 +12,13 @@ export interface PositionMinimal {
   is_active: boolean
 }
 
+export interface StaffTranslation {
+  academic_title: string | null
+  degree: string | null
+  biography: string | null
+  research_interests: string | null
+}
+
 export interface Staff {
   id: string
   department_id: string
@@ -21,7 +28,7 @@ export interface Staff {
   slug: string
   academic_title: string | null
   degree: string | null
-  avatar_object_key: string | null // BE returns full HTTP URL
+  avatar_object_key: string | null
   email: string | null
   phone: string | null
   website: string | null
@@ -30,6 +37,8 @@ export interface Staff {
   research_interests: string | null
   sort_order: number
   is_active: boolean
+  is_translated: Record<string, boolean>
+  translations: Record<string, StaffTranslation>
   created_at: string
   updated_at: string
   department?: DepartmentMinimal
@@ -41,17 +50,19 @@ export interface CreateStaffPayload {
   position_id: string
   full_name: string
   english_name?: string | null
-  academic_title?: string | null
-  degree?: string | null
   avatar_object_key?: string | null
   email?: string | null
   phone?: string | null
   website?: string | null
   office?: string | null
-  biography?: string | null
-  research_interests?: string | null
   sort_order?: number
   is_active?: boolean
+  translations: Record<string, {
+    academic_title?: string | null
+    degree?: string | null
+    biography?: string | null
+    research_interests?: string | null
+  }>
 }
 
 export interface UpdateStaffPayload {
@@ -59,17 +70,19 @@ export interface UpdateStaffPayload {
   position_id?: string
   full_name?: string
   english_name?: string | null
-  academic_title?: string | null
-  degree?: string | null
   avatar_object_key?: string | null
   email?: string | null
   phone?: string | null
   website?: string | null
   office?: string | null
-  biography?: string | null
-  research_interests?: string | null
   sort_order?: number
   is_active?: boolean
+  translations?: Record<string, {
+    academic_title?: string | null
+    degree?: string | null
+    biography?: string | null
+    research_interests?: string | null
+  }>
 }
 
 export interface UpdateStaffStatusPayload {
@@ -82,8 +95,8 @@ export interface StaffListParams {
   search?: string | null
   department_id?: string | null
   position_id?: string | null
-  academic_title?: string | null
-  degree?: string | null
+  academic_title_id?: string | null
+  degree_id?: string | null
   is_active?: boolean | null
   sort_by?: 'full_name' | 'sort_order' | 'created_at'
   order?: 'asc' | 'desc'
@@ -99,9 +112,14 @@ export interface StaffPagination {
   has_previous: boolean
 }
 
-export interface StaffStats {
+export interface StatDetail {
   total: number
   active: number
   inactive: number
-  high_qualification: number
+}
+
+export interface StaffStats {
+  departments: StatDetail
+  positions: StatDetail
+  staffs: StatDetail
 }

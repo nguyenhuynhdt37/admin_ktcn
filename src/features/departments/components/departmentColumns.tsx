@@ -3,17 +3,17 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
-  Users,
-  ShieldAlert,
   Phone,
   Mail,
   MapPin,
-  Globe
+  Globe,
+  Users,
+  ShieldAlert
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
 import { Checkbox } from '@/shared/components/ui/checkbox'
 import { Switch } from '@/shared/components/ui/switch'
+import { Badge } from '@/shared/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 import type { Department } from '../types'
 
 interface DepartmentColumnsProps {
@@ -62,16 +63,45 @@ export const getDepartmentColumns = ({
     header: 'Tên bộ môn',
     cell: ({ row }) => {
       const item = row.original
+      const enName = item.translations?.en?.name
+
       return (
         <div className="flex flex-col gap-1 max-w-[220px]">
           <span className="font-semibold text-xs text-foreground leading-normal truncate" title={item.name}>
             {item.name}
           </span>
-          {item.english_name && (
-            <span className="text-[10px] text-muted-foreground leading-normal truncate" title={item.english_name}>
-              {item.english_name}
+          {enName && (
+            <span className="text-[10px] text-muted-foreground leading-normal truncate" title={enName}>
+              {enName}
             </span>
           )}
+          
+          {/* Badge ngôn ngữ dịch thuật VI / EN */}
+          <div className="flex items-center gap-1.5 shrink-0 mt-1">
+            <span 
+              className={cn(
+                "text-[8px] font-bold px-1 rounded-sm border select-none tracking-wider scale-90 origin-left",
+                item.is_translated?.vi 
+                  ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20" 
+                  : "bg-destructive/15 text-destructive border-destructive/20"
+              )}
+              title={item.is_translated?.vi ? "Đã dịch Tiếng Việt" : "Chưa dịch Tiếng Việt"}
+            >
+              VI
+            </span>
+            <span 
+              className={cn(
+                "text-[8px] font-bold px-1 rounded-sm border select-none tracking-wider scale-90 origin-left",
+                item.is_translated?.en 
+                  ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20" 
+                  : "bg-destructive/15 text-destructive border-destructive/20"
+              )}
+              title={item.is_translated?.en ? "Đã dịch Tiếng Anh" : "Chưa dịch Tiếng Anh"}
+            >
+              EN
+            </span>
+          </div>
+
           {item.website && (
             <a
               href={item.website}
@@ -196,9 +226,8 @@ export const getDepartmentColumns = ({
                   <TooltipTrigger asChild>
                     <span className="w-full block">
                       <DropdownMenuItem
-                        disabled={hasStaff}
-                        className={`text-xs w-full ${hasStaff ? 'text-muted-foreground/60 cursor-not-allowed opacity-50' : 'cursor-pointer text-destructive focus:bg-destructive/10'}`}
-                        onClick={() => !hasStaff && onDelete(item.id)}
+                        className="cursor-pointer text-xs w-full text-destructive focus:bg-destructive/10"
+                        onClick={() => onDelete(item.id)}
                       >
                         <Trash2 className="mr-2 h-3.5 w-3.5" />
                         <span>Xóa bộ môn</span>
@@ -209,7 +238,7 @@ export const getDepartmentColumns = ({
                     <TooltipContent side="left" className="text-xs bg-amber-50 text-amber-800 border border-amber-200 shadow-sm max-w-[200px] leading-relaxed">
                       <div className="flex items-start gap-1">
                         <ShieldAlert className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <span>Không thể xóa bộ môn đang chứa giảng viên.</span>
+                        <span>Chú ý: Bộ môn có {item.staff_count} giảng viên. Xóa sẽ đồng thời xóa giảng viên thuộc bộ môn.</span>
                       </div>
                     </TooltipContent>
                   )}

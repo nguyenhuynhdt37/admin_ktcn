@@ -59,5 +59,6 @@ export interface FlatMenuItem extends Omit<MenuItemNode, 'children'> {
   isPlaceholder?: boolean
   isValid?: boolean
   isVirtual?: boolean
+  children_count?: number
 }
 

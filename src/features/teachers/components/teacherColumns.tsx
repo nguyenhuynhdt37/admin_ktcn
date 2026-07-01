@@ -19,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
+import { getMediaUrl } from '@/features/articles/utils/media'
 import type { Staff } from '../types'
 
 interface TeacherColumnsProps {
@@ -70,7 +72,7 @@ export const getTeacherColumns = ({
         <div className="flex items-center gap-3 py-0.5">
           {item.avatar_object_key ? (
             <img
-              src={item.avatar_object_key}
+              src={getMediaUrl(item.avatar_object_key)}
               alt={item.full_name}
               className="h-9 w-9 rounded-full object-cover shrink-0 border border-border/80"
               onError={(e) => {
@@ -100,6 +102,32 @@ export const getTeacherColumns = ({
                 {item.email}
               </span>
             )}
+            
+            {/* Badge ngôn ngữ dịch thuật VI / EN */}
+            <div className="flex items-center gap-1 mt-1">
+              <span 
+                className={cn(
+                  "text-[8px] font-bold px-1 rounded-sm border select-none tracking-wider scale-90 origin-left",
+                  item.is_translated?.vi 
+                    ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20" 
+                    : "bg-destructive/15 text-destructive border-destructive/20"
+                )}
+                title={item.is_translated?.vi ? "Đã dịch Tiếng Việt" : "Chưa dịch Tiếng Việt"}
+              >
+                VI
+              </span>
+              <span 
+                className={cn(
+                  "text-[8px] font-bold px-1 rounded-sm border select-none tracking-wider scale-90 origin-left",
+                  item.is_translated?.en 
+                    ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20" 
+                    : "bg-destructive/15 text-destructive border-destructive/20"
+                )}
+                title={item.is_translated?.en ? "Đã dịch Tiếng Anh" : "Chưa dịch Tiếng Anh"}
+              >
+                EN
+              </span>
+            </div>
           </div>
         </div>
       )

@@ -3,7 +3,6 @@ import type {
   Position,
   CreatePositionPayload,
   UpdatePositionPayload,
-  UpdatePositionStatusPayload,
   PositionListParams,
   PositionPagination,
   PositionStats,
@@ -12,7 +11,7 @@ import type {
 export const positionService = {
   /** Lấy dữ liệu thống kê chức vụ */
   getStats: async (): Promise<PositionStats> => {
-    const response = await httpClient.get('/positions/stats')
+    const response = await httpClient.get('/admin/positions/stats')
     return response.data
   },
 
@@ -23,36 +22,44 @@ export const positionService = {
     if (cleanedParams.search === null) delete cleanedParams.search
     if (cleanedParams.is_active === null) delete cleanedParams.is_active
     
-    const response = await httpClient.get('/positions', { params: cleanedParams })
+    const response = await httpClient.get('/admin/positions', { params: cleanedParams })
     return response.data
   },
 
   /** Lấy chi tiết chức vụ theo ID */
   getDetail: async (id: string): Promise<Position> => {
-    const response = await httpClient.get(`/positions/${id}`)
+    const response = await httpClient.get(`/admin/positions/${id}`)
     return response.data
   },
 
   /** Tạo chức vụ mới */
   create: async (payload: CreatePositionPayload): Promise<Position> => {
-    const response = await httpClient.post('/positions', payload)
+    const response = await httpClient.post('/admin/positions', payload)
     return response.data
   },
 
   /** Cập nhật chi tiết chức vụ */
   update: async (id: string, payload: UpdatePositionPayload): Promise<Position> => {
-    const response = await httpClient.put(`/positions/${id}`, payload)
+    const response = await httpClient.put(`/admin/positions/${id}`, payload)
     return response.data
   },
 
   /** Cập nhật nhanh trạng thái bật/tắt hoạt động */
-  updateStatus: async (id: string, payload: UpdatePositionStatusPayload): Promise<Position> => {
-    const response = await httpClient.patch(`/positions/${id}/status`, payload)
+  updateStatus: async (id: string, payload: { is_active: boolean }): Promise<Position> => {
+    const response = await httpClient.put(`/admin/positions/${id}`, payload)
     return response.data
   },
 
   /** Xóa mềm chức vụ */
   delete: async (id: string): Promise<void> => {
-    await httpClient.delete(`/positions/${id}`)
+    await httpClient.delete(`/admin/positions/${id}`)
+  },
+
+  /** Lấy danh sách giảng viên đang đảm nhiệm các chức vụ này (để cảnh báo trước khi xóa) */
+  getStaffsToDelete: async (ids: string[]): Promise<{ id: string; full_name: string; avatar_object_key: string | null; department_name: string; position_id: string }[]> => {
+    const response = await httpClient.get('/admin/positions/staffs-to-delete', {
+      params: { position_ids: ids.join(',') }
+    })
+    return response.data
   },
 }

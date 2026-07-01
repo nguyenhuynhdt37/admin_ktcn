@@ -13,12 +13,13 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
-import { Dialog, DialogContent } from '@/shared/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog'
 import { DataTable } from '@/shared/components/DataTable'
 import { DepartmentForm } from '../components/DepartmentForm'
 import { getDepartmentColumns } from '../components/departmentColumns'
 import { departmentService } from '../services/departmentService'
 import { toast } from 'sonner'
+import { getMediaUrl } from '@/features/articles/utils/media'
 
 export function DepartmentsPage() {
   const queryClient = useQueryClient()
@@ -26,6 +27,11 @@ export function DepartmentsPage() {
   // UI states
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    ids: string[]
+    staffs: { id: string; full_name: string; avatar_object_key: string | null; position_name: string; department_id: string }[]
+    isLoading: boolean
+  } | null>(null)
   
   // Table states (Server-side pagination & sorting)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -223,9 +229,16 @@ export function DepartmentsPage() {
     toggleStatusMutation.mutate({ id, is_active: active })
   }, [toggleStatusMutation])
 
-  const handleDelete = useCallback((id: string) => {
-    deleteMutation.mutate(id)
-  }, [deleteMutation])
+  const handleDelete = useCallback(async (id: string) => {
+    setDeleteTarget({ ids: [id], staffs: [], isLoading: true })
+    try {
+      const staffs = await departmentService.getStaffsToDelete([id])
+      setDeleteTarget({ ids: [id], staffs, isLoading: false })
+    } catch (err) {
+      console.error('Lỗi lấy danh sách giảng viên để xóa:', err)
+      setDeleteTarget({ ids: [id], staffs: [], isLoading: false })
+    }
+  }, [])
 
   // Get selected UUIDs from React Table index
   const selectedIds = useMemo(() => {
@@ -240,22 +253,16 @@ export function DepartmentsPage() {
     bulkStatusMutation.mutate({ ids: selectedIds, is_active: active })
   }
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return
     
-    // Check if any selected department has staff linked to it (safeguard)
-    const hasLinkedStaff = Object.keys(rowSelection).some((index) => {
-      const dept = departments[Number(index)]
-      return dept && dept.staff_count > 0
-    })
- 
-    if (hasLinkedStaff) {
-      toast.error('Một hoặc nhiều bộ môn được chọn đang chứa giảng viên. Vui lòng bỏ chọn để thực hiện xóa.')
-      return
-    }
- 
-    if (confirm(`Bạn có chắc chắn muốn xóa hàng loạt ${selectedIds.length} bộ môn đã chọn?`)) {
-      bulkDeleteMutation.mutate(selectedIds)
+    setDeleteTarget({ ids: selectedIds, staffs: [], isLoading: true })
+    try {
+      const staffs = await departmentService.getStaffsToDelete(selectedIds)
+      setDeleteTarget({ ids: selectedIds, staffs, isLoading: false })
+    } catch (err) {
+      console.error('Lỗi lấy danh sách giảng viên để xóa hàng loạt:', err)
+      setDeleteTarget({ ids: selectedIds, staffs: [], isLoading: false })
     }
   }
 
@@ -288,9 +295,9 @@ export function DepartmentsPage() {
       </div>
 
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {isStatsLoading || !stats ? (
-          Array.from({ length: 4 }).map((_, i) => (
+          Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="bg-card text-card-foreground animate-pulse border shadow-2xs">
               <div className="p-4 space-y-2">
                 <div className="h-3 w-16 bg-muted rounded" />
@@ -327,16 +334,6 @@ export function DepartmentsPage() {
               </CardHeader>
               <CardContent className="pb-4">
                 <div className="text-2xl font-bold font-mono text-amber-600">{stats.inactive}</div>
-              </CardContent>
-            </Card>
- 
-            <Card className="bg-card text-card-foreground border shadow-2xs text-left">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tổng số giảng viên</CardTitle>
-                <Users className="h-3.5 w-3.5 text-blue-500" />
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="text-2xl font-bold font-mono text-blue-600">{stats.total_staff}</div>
               </CardContent>
             </Card>
           </>
@@ -446,6 +443,97 @@ export function DepartmentsPage() {
               isSubmitting={createMutation.isPending || updateMutation.isPending}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Cascade Delete Warning Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-[420px] p-6 border text-left">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              {deleteTarget && deleteTarget.ids.length > 1 ? 'Xác nhận xóa hàng loạt bộ môn' : 'Xác nhận xóa bộ môn'}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Hành động này sẽ thực hiện xóa mềm bộ môn khỏi hệ thống.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteTarget?.isLoading ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span className="text-[10px] text-muted-foreground font-medium animate-pulse">Đang tính toán giảng viên liên đới...</span>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              {deleteTarget && deleteTarget.staffs.length > 0 ? (
+                <>
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-200 bg-amber-500/10 text-amber-800 dark:text-amber-300">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                    <div className="text-xs leading-relaxed font-medium">
+                      CẢNH BÁO: Phát hiện <strong className="text-destructive font-bold">{deleteTarget.staffs.length} giảng viên</strong> đang thuộc bộ môn chuẩn bị xóa. Việc xóa bộ môn sẽ <strong>ĐỒNG THỜI XÓA</strong> toàn bộ giảng viên dưới đây:
+                    </div>
+                  </div>
+                  <div className="max-h-[220px] overflow-y-auto border border-border/80 rounded-lg p-2.5 bg-muted/40 space-y-2">
+                    {deleteTarget.staffs.map((s) => (
+                      <div key={s.id} className="flex items-center gap-3 py-1.5 border-b last:border-0 border-border/40">
+                        <div className="h-9 w-9 rounded-full overflow-hidden border bg-background flex items-center justify-center shrink-0 shadow-xs">
+                          {s.avatar_object_key ? (
+                            <img src={getMediaUrl(s.avatar_object_key)} alt={s.full_name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Users className="h-4.5 w-4.5 text-muted-foreground/75" />
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0 text-left">
+                          <span className="font-semibold text-xs text-foreground truncate" title={s.full_name}>
+                            {s.full_name}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground truncate" title={s.position_name}>
+                            {s.position_name}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                  Bạn có chắc chắn muốn xóa bộ môn đã chọn? Hành động này sẽ được ghi nhận vào nhật ký hệ thống.
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteTarget(null)}
+              className="text-xs h-9 cursor-pointer font-medium"
+              disabled={deleteTarget?.isLoading || deleteMutation.isPending || bulkDeleteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (deleteTarget) {
+                  if (deleteTarget.ids.length > 1) {
+                    bulkDeleteMutation.mutate(deleteTarget.ids)
+                  } else {
+                    deleteMutation.mutate(deleteTarget.ids[0])
+                  }
+                  setDeleteTarget(null)
+                }
+              }}
+              className="text-xs h-9 cursor-pointer font-semibold"
+              disabled={deleteTarget?.isLoading || deleteMutation.isPending || bulkDeleteMutation.isPending}
+            >
+              {deleteMutation.isPending || bulkDeleteMutation.isPending ? 'Đang xóa...' : 'Xác nhận xóa'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -7,12 +7,14 @@ import type {
   StaffListParams,
   StaffPagination,
   StaffStats,
+  AcademicTitle,
+  Degree,
 } from '../types'
 
 export const teacherService = {
   /** Lấy dữ liệu thống kê giảng viên */
   getStats: async (): Promise<StaffStats> => {
-    const response = await httpClient.get<StaffStats>('/staffs/stats')
+    const response = await httpClient.get<StaffStats>('/admin/staffs/stats')
     return response.data
   },
 
@@ -23,47 +25,47 @@ export const teacherService = {
     if (cleanedParams.search === null || cleanedParams.search === '') delete cleanedParams.search
     if (cleanedParams.department_id === null || cleanedParams.department_id === '') delete cleanedParams.department_id
     if (cleanedParams.position_id === null || cleanedParams.position_id === '') delete cleanedParams.position_id
-    if (cleanedParams.academic_title === null || cleanedParams.academic_title === 'all') delete cleanedParams.academic_title
-    if (cleanedParams.degree === null || cleanedParams.degree === 'all') delete cleanedParams.degree
+    if (cleanedParams.academic_title_id === null || cleanedParams.academic_title_id === 'all') delete cleanedParams.academic_title_id
+    if (cleanedParams.degree_id === null || cleanedParams.degree_id === 'all') delete cleanedParams.degree_id
     if (cleanedParams.is_active === null) delete cleanedParams.is_active
 
-    const response = await httpClient.get<StaffPagination>('/staffs', { params: cleanedParams })
+    const response = await httpClient.get<StaffPagination>('/admin/staffs', { params: cleanedParams })
     return response.data
   },
 
   /** Lấy chi tiết giảng viên theo ID */
   getDetail: async (id: string): Promise<Staff> => {
-    const response = await httpClient.get<Staff>(`/staffs/${id}`)
+    const response = await httpClient.get<Staff>(`/admin/staffs/${id}`)
     return response.data
   },
 
-  /** Lấy chi tiết giảng viên theo Slug */
+  /** Lấy chi tiết giảng viên theo Slug (Portal) */
   getBySlug: async (slug: string): Promise<Staff> => {
-    const response = await httpClient.get<Staff>(`/staffs/slug/${slug}`)
+    const response = await httpClient.get<Staff>(`/portal/staffs/${slug}`)
     return response.data
   },
 
   /** Tạo mới hồ sơ giảng viên */
   create: async (payload: CreateStaffPayload): Promise<Staff> => {
-    const response = await httpClient.post<Staff>('/staffs', payload)
+    const response = await httpClient.post<Staff>('/admin/staffs', payload)
     return response.data
   },
 
   /** Cập nhật hồ sơ giảng viên */
   update: async (id: string, payload: UpdateStaffPayload): Promise<Staff> => {
-    const response = await httpClient.put<Staff>(`/staffs/${id}`, payload)
+    const response = await httpClient.put<Staff>(`/admin/staffs/${id}`, payload)
     return response.data
   },
 
   /** Cập nhật nhanh trạng thái hoạt động */
   updateStatus: async (id: string, payload: UpdateStaffStatusPayload): Promise<Staff> => {
-    const response = await httpClient.patch<Staff>(`/staffs/${id}/status`, payload)
+    const response = await httpClient.put<Staff>(`/admin/staffs/${id}`, payload)
     return response.data
   },
 
   /** Xóa mềm giảng viên */
   delete: async (id: string): Promise<void> => {
-    await httpClient.delete(`/staffs/${id}`)
+    await httpClient.delete(`/admin/staffs/${id}`)
   },
 
   /** Tải ảnh đại diện lên máy chủ media */
@@ -76,5 +78,17 @@ export const teacherService = {
       },
     })
     return data
+  },
+
+  /** Lấy danh sách Học hàm cho Admin */
+  getAcademicTitles: async (): Promise<AcademicTitle[]> => {
+    const response = await httpClient.get<AcademicTitle[]>('/admin/academic-titles')
+    return response.data
+  },
+
+  /** Lấy danh sách Học vị cho Admin */
+  getDegrees: async (): Promise<Degree[]> => {
+    const response = await httpClient.get<Degree[]>('/admin/degrees')
+    return response.data
   },
 }

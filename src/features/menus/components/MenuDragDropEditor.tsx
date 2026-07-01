@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, ChevronsUpDown, ChevronsDownUp, AlertTriangle } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { menusService } from '../services/menusService'
 import { SortableMenuItem } from './SortableMenuItem'
@@ -45,7 +45,12 @@ function flattenTree(nodes: MenuItemNode[], parentId: string | null = null): Fla
     const { children, ...rest } = node
     // API mới trả về title trong translations, gán title phẳng bằng translations.vi.title
     const title = node.translations?.vi?.title || node.title || ''
-    result.push({ ...rest, title, parent_id: parentId })
+    result.push({
+      ...rest,
+      title,
+      parent_id: parentId,
+      children_count: children ? children.length : 0,
+    })
     if (children && children.length > 0) {
       result = result.concat(flattenTree(children, node.id))
     }
@@ -124,6 +129,35 @@ export function MenuDragDropEditor({
   
   // State lưu ID của item vừa được thả để kích hoạt hiệu ứng sáng active (flash)
   const [justDroppedId, setJustDroppedId] = useState<string | null>(null)
+
+  // State lưu trữ danh sách ID các node bị thu gọn
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
+
+  // Mở rộng tất cả
+  const handleExpandAll = () => {
+    setCollapsedIds(new Set())
+  }
+
+  // Thu nhỏ tất cả các node có menu con
+  const handleCollapseAll = () => {
+    const hasChildrenIds = flatItems
+      .filter((item) => item.children_count > 0)
+      .map((item) => item.id)
+    setCollapsedIds(new Set(hasChildrenIds))
+  }
+
+  // Thu nhỏ hoặc mở rộng một node cụ thể
+  const handleToggleCollapse = (id: string) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   // State quản lý Placeholder động khi đang kéo
   const [placeholderInfo, setPlaceholderInfo] = useState<{
@@ -570,6 +604,20 @@ export function MenuDragDropEditor({
 
   const activeItem = flatItems.find((item) => item.id === activeId)
 
+  // Lọc ra các items thực sự hiển thị dựa trên collapsedIds
+  const visibleItems: typeof displayItems = []
+  let skipDepth = 999
+  for (const item of displayItems) {
+    if (item.depth > skipDepth) {
+      continue
+    }
+    skipDepth = 999
+    visibleItems.push(item)
+    if (collapsedIds.has(item.id)) {
+      skipDepth = item.depth
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Header bar */}
@@ -589,6 +637,30 @@ export function MenuDragDropEditor({
               <span>Đang tự động lưu...</span>
             </div>
           )}
+          
+          {/* Nút Thu gọn / Mở rộng tất cả */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={collapsedIds.size > 0 ? handleExpandAll : handleCollapseAll}
+            className="text-xs h-8 px-2.5 cursor-pointer font-medium hover:bg-muted text-muted-foreground flex items-center gap-1.5"
+            title={collapsedIds.size > 0 ? "Mở rộng toàn bộ mục menu con" : "Thu nhỏ toàn bộ mục menu con"}
+          >
+            {collapsedIds.size > 0 ? (
+              <>
+                <ChevronsUpDown className="h-3.5 w-3.5" />
+                <span>Mở rộng tất cả</span>
+              </>
+            ) : (
+              <>
+                <ChevronsDownUp className="h-3.5 w-3.5" />
+                <span>Thu nhỏ tất cả</span>
+              </>
+            )}
+          </Button>
+          <div className="h-4 w-px bg-border mx-1" />
+
           {canCreate && (
             <Button
               variant="outline"
@@ -637,11 +709,11 @@ export function MenuDragDropEditor({
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={displayItems.map((item) => item.id)}
+              items={visibleItems.map((item) => item.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="relative space-y-1 pr-1 z-10">
-                {displayItems.map((item) => {
+                {visibleItems.map((item) => {
                   if (item.isPlaceholder) {
                     return (
                       <div
@@ -665,9 +737,13 @@ export function MenuDragDropEditor({
                             }}
                           />
                         )}
-                        <span className="shrink-0 ml-4">
-                          {item.isValid ? '➕' : '🚫'}
-                        </span>
+                        <div className="shrink-0 ml-3">
+                          {item.isValid ? (
+                            <Plus className="h-4 w-4 text-primary" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                          )}
+                        </div>
                         <span className="truncate">
                           {item.title}
                         </span>
@@ -691,13 +767,16 @@ export function MenuDragDropEditor({
                       isValid={item.isValid}
                       onEdit={() => onSelectItem(item.id)}
                       onDelete={() => {
-                        if (confirm(`Bạn có chắc chắn muốn xóa mục "${item.title}" cùng toàn bộ mục con?`)) {
+                        if (confirm(`Bạn có chắc chắn muốn xóa mục menu "${item.title}" cùng toàn bộ mục con?`)) {
                           deleteMutation.mutate(item.id)
                         }
                       }}
                       onAddChild={() => onCreateItem?.(item.id)}
-                      isVirtual={(item as any).isVirtual}
                       isTranslated={item.is_translated}
+                      isVirtual={(item as any).isVirtual}
+                      hasChildren={item.children_count > 0}
+                      isCollapsed={collapsedIds.has(item.id)}
+                      onToggleCollapse={() => handleToggleCollapse(item.id)}
                     />
                   )
                 })}

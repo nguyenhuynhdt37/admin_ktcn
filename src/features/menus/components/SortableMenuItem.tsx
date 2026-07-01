@@ -12,6 +12,8 @@ import {
   Plus,
   Award,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
@@ -36,6 +38,9 @@ interface SortableMenuItemProps {
   onAddChild?: () => void
   isVirtual?: boolean
   isTranslated?: Record<string, boolean> | null
+  hasChildren?: boolean
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 export function SortableMenuItem({
@@ -54,6 +59,9 @@ export function SortableMenuItem({
   onAddChild,
   isVirtual = false,
   isTranslated,
+  hasChildren = false,
+  isCollapsed = false,
+  onToggleCollapse,
 }: SortableMenuItemProps) {
   const {
     attributes,
@@ -208,6 +216,26 @@ export function SortableMenuItem({
             >
               <GripVertical className="h-4 w-4" />
             </button>
+          )}
+
+          {/* Nút thu gọn / mở rộng */}
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleCollapse?.()
+              }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors shrink-0 cursor-pointer"
+              title={isCollapsed ? "Mở rộng mục menu con" : "Thu gọn mục menu con"}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </button>
+          ) : (
+            <div className="w-[22px] shrink-0" />
           )}
 
           {/* Icon loại liên kết / Icon được chọn */}

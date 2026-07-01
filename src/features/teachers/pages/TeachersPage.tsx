@@ -13,11 +13,14 @@ import {
   Sparkles,
   Trash2,
   X,
-  Search
+  Search,
+  Building2,
+  Briefcase
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -45,17 +48,20 @@ export function TeachersPage() {
   const [selectedDegree, setSelectedDegree] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all')
 
+  // UI states
+  const [deleteTarget, setDeleteTarget] = useState<{ ids: string[] } | null>(null)
+
   // Table states
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'sort_order', desc: false }
   ])
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0, // 0-indexed in React Table
+    pageIndex: 0,
     pageSize: 10,
   })
 
-  // 1. Fetch departments (Bộ môn) to populate Filter Select
+  // 1. Fetch departments to populate Filter Select
   const { data: departmentData } = useQuery({
     queryKey: ['departments-active'],
     queryFn: () => departmentService.list({ is_active: true, page_size: 100 }),
@@ -64,22 +70,34 @@ export function TeachersPage() {
 
   const activeDeptId = selectedDeptId || departments[0]?.id || ''
 
-  // 2. Fetch positions (Chức vụ) to populate Filter Select
+  // 2. Fetch positions to populate Filter Select
   const { data: positionData } = useQuery({
     queryKey: ['positions-active'],
     queryFn: () => positionService.list({ is_active: true, page_size: 100 }),
   })
   const positions = useMemo(() => positionData?.items || [], [positionData])
 
+  // 2b. Fetch academic titles to populate Filter Select
+  const { data: academicTitles = [] } = useQuery({
+    queryKey: ['academic-titles-active'],
+    queryFn: () => teacherService.getAcademicTitles(),
+  })
+
+  // 2c. Fetch degrees to populate Filter Select
+  const { data: degrees = [] } = useQuery({
+    queryKey: ['degrees-active'],
+    queryFn: () => teacherService.getDegrees(),
+  })
+
   // 3. Query: Fetch staff list (Server-side paginated & filtered)
   const listParams = useMemo(() => ({
-    page: pagination.pageIndex + 1, // 1-indexed in API
+    page: pagination.pageIndex + 1,
     page_size: pagination.pageSize,
     search: debouncedSearchQuery.trim() || null,
     department_id: activeDeptId === 'all' || activeDeptId === '' ? null : activeDeptId,
     position_id: selectedPosId === 'all' ? null : selectedPosId,
-    academic_title: selectedTitle === 'all' ? null : selectedTitle,
-    degree: selectedDegree === 'all' ? null : selectedDegree,
+    academic_title_id: selectedTitle === 'all' ? null : selectedTitle,
+    degree_id: selectedDegree === 'all' ? null : selectedDegree,
     is_active: selectedStatus === 'all' ? null : selectedStatus === 'active',
     sort_by: sorting[0]?.id as 'full_name' | 'sort_order' | 'created_at' || 'sort_order',
     order: sorting[0]?.desc ? 'desc' as const : 'asc' as const,
@@ -103,14 +121,12 @@ export function TeachersPage() {
     queryFn: () => teacherService.getStats(),
   })
 
-
-
   // 5. Mutation: Toggle active status
   const toggleStatusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
       teacherService.updateStatus(id, { is_active }),
     onSuccess: (data) => {
-      toast.success(`Đã cập nhật trạng thái hồ sơ của giảng viên "${data.full_name}"`)
+      toast.success(`Đã cập nhật trạng thái hồ sơ của giảng viên`)
       queryClient.invalidateQueries({ queryKey: ['teachers'] })
       queryClient.invalidateQueries({ queryKey: ['teachers-stats'] })
     },
@@ -189,10 +205,8 @@ export function TeachersPage() {
   }, [toggleStatusMutation])
 
   const handleDelete = useCallback((id: string) => {
-    if (confirm('Bạn có chắc chắn muốn xóa hồ sơ giảng viên này?')) {
-      deleteMutation.mutate(id)
-    }
-  }, [deleteMutation])
+    setDeleteTarget({ ids: [id] })
+  }, [])
 
   // Get selected UUIDs from selection state
   const selectedIds = useMemo(() => {
@@ -209,9 +223,7 @@ export function TeachersPage() {
 
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return
-    if (confirm(`Bạn có chắc chắn muốn xóa hàng loạt ${selectedIds.length} hồ sơ giảng viên đã chọn?`)) {
-      bulkDeleteMutation.mutate(selectedIds)
-    }
+    setDeleteTarget({ ids: selectedIds })
   }
 
   // Map list options for SearchableSelect
@@ -270,11 +282,11 @@ export function TeachersPage() {
           <>
             <Card className="bg-card text-card-foreground border shadow-2xs text-left">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tổng số giảng viên</CardTitle>
+                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tổng giảng viên</CardTitle>
                 <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
               </CardHeader>
               <CardContent className="pb-4">
-                <div className="text-2xl font-bold font-mono">{stats.total}</div>
+                <div className="text-2xl font-bold font-mono">{stats.staffs?.total || 0}</div>
               </CardContent>
             </Card>
  
@@ -284,27 +296,27 @@ export function TeachersPage() {
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
               </CardHeader>
               <CardContent className="pb-4">
-                <div className="text-2xl font-bold font-mono text-emerald-600">{stats.active}</div>
+                <div className="text-2xl font-bold font-mono text-emerald-600">{stats.staffs?.active || 0}</div>
               </CardContent>
             </Card>
  
             <Card className="bg-card text-card-foreground border shadow-2xs text-left">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Không hoạt động</CardTitle>
-                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tổng bộ môn</CardTitle>
+                <Building2 className="h-3.5 w-3.5 text-amber-500" />
               </CardHeader>
               <CardContent className="pb-4">
-                <div className="text-2xl font-bold font-mono text-amber-600">{stats.inactive}</div>
+                <div className="text-2xl font-bold font-mono text-amber-600">{stats.departments?.total || 0}</div>
               </CardContent>
             </Card>
  
             <Card className="bg-card text-card-foreground border shadow-2xs text-left">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tiến sĩ / GS / PGS</CardTitle>
-                <Users className="h-3.5 w-3.5 text-blue-500" />
+                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tổng chức vụ</CardTitle>
+                <Briefcase className="h-3.5 w-3.5 text-blue-500" />
               </CardHeader>
               <CardContent className="pb-4">
-                <div className="text-2xl font-bold font-mono text-blue-600">{stats.high_qualification}</div>
+                <div className="text-2xl font-bold font-mono text-blue-600">{stats.positions?.total || 0}</div>
               </CardContent>
             </Card>
           </>
@@ -355,54 +367,55 @@ export function TeachersPage() {
               setSelectedPosId(val)
               setPagination((p) => ({ ...p, pageIndex: 0 }))
             }}
-            placeholder="Tất cả chức vụ"
+            placeholder="Chọn chức vụ"
             emptyMessage="Không tìm thấy chức vụ."
           />
-        </div>
-
-        {/* Lọc Học vị */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Học vị</label>
-          <Select value={selectedDegree} onValueChange={(val) => { setSelectedDegree(val); setPagination(p => ({ ...p, pageIndex: 0 })); }}>
-            <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
-              <SelectValue placeholder="Tất cả học vị" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="text-xs">Tất cả học vị</SelectItem>
-              <SelectItem value="Tiến sĩ" className="text-xs">Tiến sĩ (TS)</SelectItem>
-              <SelectItem value="Thạc sĩ" className="text-xs">Thạc sĩ (ThS)</SelectItem>
-              <SelectItem value="Kỹ sư" className="text-xs">Kỹ sư (KS)</SelectItem>
-              <SelectItem value="Cử nhân" className="text-xs">Cử nhân (CN)</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Lọc Học hàm */}
         <div className="space-y-1">
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Học hàm</label>
-          <Select value={selectedTitle} onValueChange={(val) => { setSelectedTitle(val); setPagination(p => ({ ...p, pageIndex: 0 })); }}>
+          <Select
+            value={selectedTitle}
+            onValueChange={(val) => {
+              setSelectedTitle(val)
+              setPagination((p) => ({ ...p, pageIndex: 0 }))
+            }}
+          >
             <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
-              <SelectValue placeholder="Tất cả học hàm" />
+              <SelectValue placeholder="Chọn học hàm" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="text-xs">Tất cả học hàm</SelectItem>
-              <SelectItem value="Giáo sư" className="text-xs">Giáo sư (GS)</SelectItem>
-              <SelectItem value="Phó Giáo sư" className="text-xs">Phó Giáo sư (PGS)</SelectItem>
+              <SelectItem value="all" className="text-xs">Tất cả</SelectItem>
+              {academicTitles.map((title) => (
+                <SelectItem key={title.id} value={title.id} className="text-xs">
+                  {title.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Lọc Trạng thái */}
+        {/* Lọc Học vị */}
         <div className="space-y-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Trạng thái</label>
-          <Select value={selectedStatus} onValueChange={(val: 'all' | 'active' | 'inactive') => { setSelectedStatus(val); setPagination(p => ({ ...p, pageIndex: 0 })); }}>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Học vị</label>
+          <Select
+            value={selectedDegree}
+            onValueChange={(val) => {
+              setSelectedDegree(val)
+              setPagination((p) => ({ ...p, pageIndex: 0 }))
+            }}
+          >
             <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
-              <SelectValue placeholder="Tất cả trạng thái" />
+              <SelectValue placeholder="Chọn học vị" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="text-xs">Tất cả</SelectItem>
-              <SelectItem value="active" className="text-xs">Đang hoạt động</SelectItem>
-              <SelectItem value="inactive" className="text-xs">Không hoạt động</SelectItem>
+              {degrees.map((deg) => (
+                <SelectItem key={deg.id} value={deg.id} className="text-xs">
+                  {deg.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -415,7 +428,7 @@ export function TeachersPage() {
             <AlertCircle className="h-10 w-10 text-destructive mb-3" />
             <h3 className="font-semibold text-lg text-destructive">Lỗi tải danh sách giảng viên</h3>
             <p className="text-muted-foreground text-sm max-w-sm mt-1">
-              Đã xảy ra lỗi khi tải dữ liệu từ máy chủ. Vui lòng kiểm tra lại.
+              Đã xảy ra lỗi khi kết nối đến máy chủ để lấy dữ liệu. Vui lòng kiểm tra lại.
             </p>
             <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4 flex items-center gap-1.5 cursor-pointer">
               <RefreshCw className="h-3.5 w-3.5" /> Thử lại
@@ -494,6 +507,58 @@ export function TeachersPage() {
           </div>
         </div>
       )}
+
+      {/* Custom Delete Warning Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-[420px] p-6 border text-left">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              {deleteTarget && deleteTarget.ids.length > 1 ? 'Xác nhận xóa hàng loạt hồ sơ' : 'Xác nhận xóa hồ sơ'}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Hành động này sẽ thực hiện xóa mềm hồ sơ giảng viên khỏi hệ thống.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              Bạn có chắc chắn muốn xóa {deleteTarget && deleteTarget.ids.length > 1 ? 'các giảng viên đã chọn' : 'giảng viên này'}? Hành động này sẽ được ghi nhận vào nhật ký hệ thống.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteTarget(null)}
+              className="text-xs h-9 cursor-pointer font-medium"
+              disabled={deleteMutation.isPending || bulkDeleteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                if (deleteTarget) {
+                  if (deleteTarget.ids.length > 1) {
+                    bulkDeleteMutation.mutate(deleteTarget.ids)
+                  } else {
+                    deleteMutation.mutate(deleteTarget.ids[0])
+                  }
+                  setDeleteTarget(null)
+                }
+              }}
+              className="text-xs h-9 cursor-pointer font-semibold"
+              disabled={deleteMutation.isPending || bulkDeleteMutation.isPending}
+            >
+              {deleteMutation.isPending || bulkDeleteMutation.isPending ? 'Đang xóa...' : 'Xác nhận xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

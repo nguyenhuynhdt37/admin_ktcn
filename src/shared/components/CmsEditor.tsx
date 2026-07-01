@@ -62,14 +62,14 @@ export function CmsEditor({
   const editorRef = useRef<any>(null)
   const isInitializedRef = useRef(false)
 
-  // Sync value from parent once when it finishes loading asynchronously (Edit mode)
+  // Sync value from parent when it finishes loading asynchronously or when tab changes
   useEffect(() => {
-    if (editorRef.current && value && !isInitializedRef.current) {
+    if (editorRef.current) {
       const currentData = editorRef.current.getData()
-      if (currentData !== value) {
-        editorRef.current.setData(value)
+      const safeValue = value || ''
+      if (currentData !== safeValue) {
+        editorRef.current.setData(safeValue)
       }
-      isInitializedRef.current = true
     }
   }, [value])
 
@@ -83,14 +83,12 @@ export function CmsEditor({
     >
       <CKEditor
         editor={ClassicEditor}
-        data={value}
+        data={value || ''}
         disabled={disabled}
         onReady={(editor) => {
           editorRef.current = editor
-          if (value) {
-            editor.setData(value)
-            isInitializedRef.current = true
-          }
+          const safeValue = value || ''
+          editor.setData(safeValue)
         }}
         config={{
           licenseKey: 'GPL',
