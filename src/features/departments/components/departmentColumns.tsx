@@ -25,6 +25,7 @@ import {
 } from '@/shared/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { Department } from '../types'
+import { getMediaUrl } from '@/features/articles/utils/media'
 
 interface DepartmentColumnsProps {
   onEdit: (id: string) => void
@@ -57,6 +58,25 @@ export const getDepartmentColumns = ({
     ),
     enableSorting: false,
     enableHiding: false,
+  },
+  {
+    id: 'thumbnail',
+    header: 'Ảnh',
+    cell: ({ row }) => {
+      const item = row.original
+      const thumbUrl = getMediaUrl(item.thumbnail_object_key)
+      return thumbUrl ? (
+        <img
+          src={thumbUrl}
+          alt={item.name}
+          className="h-10 w-14 rounded-md object-cover border border-border"
+        />
+      ) : (
+        <div className="h-10 w-14 rounded-md bg-muted flex items-center justify-center text-[10px] text-muted-foreground/60 border border-border/40 font-mono">
+          No IMG
+        </div>
+      )
+    }
   },
   {
     accessorKey: 'name',
