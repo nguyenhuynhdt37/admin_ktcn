@@ -11,6 +11,11 @@ import { UserActivityPage } from '@/features/users/pages/UserActivityPage'
 import { AuditLogsPage } from '@/features/audit-logs/pages/AuditLogsPage'
 import { MenusPage } from '@/features/menus/pages/MenusPage'
 import { LanguagesPage } from '@/features/languages/pages/LanguagesPage'
+import { AIHubPage } from '@/features/ai-hub/pages/AIHubPage'
+import { EmbeddingSettingsPage } from '@/features/ai-hub/pages/EmbeddingSettingsPage'
+
+
+
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
 import { PositionsPage } from '@/features/positions/pages/PositionsPage'
 import { DepartmentsPage } from '@/features/departments/pages/DepartmentsPage'
@@ -149,6 +154,16 @@ export const router = createBrowserRouter([
         path: 'languages',
         element: <LanguagesPage />,
       },
+
+      {
+        path: 'languages/ai-hub',
+        element: <AIHubPage />,
+      },
+      {
+        path: 'languages/embedding',
+        element: <EmbeddingSettingsPage />,
+      },
+
 
       {
         path: '*',

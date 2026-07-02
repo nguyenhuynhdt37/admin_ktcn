@@ -3,13 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/sha
 import { Button } from '@/shared/components/ui/button'
 import { Label } from '@/shared/components/ui/label'
 import { CmsEditor } from '@/shared/components/CmsEditor'
-import { Maximize2, Minimize2 } from 'lucide-react'
+import { Maximize2, Minimize2, Languages, Loader2 } from 'lucide-react'
 
 interface ArticleEditorSectionProps {
   content: string
   setContent: (value: string) => void
   disabled?: boolean
   errors?: { content?: string }
+
+  // Props dịch nhanh
+  showTranslateActions?: boolean
+  onTranslateContent?: () => void
+  isTranslatingContent?: boolean
 }
 
 export function ArticleEditorSection({
@@ -17,6 +22,9 @@ export function ArticleEditorSection({
   setContent,
   disabled = false,
   errors,
+  showTranslateActions = false,
+  onTranslateContent,
+  isTranslatingContent = false,
 }: ArticleEditorSectionProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -57,9 +65,24 @@ export function ArticleEditorSection({
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Label className="text-xs font-semibold text-foreground">
-          Chi tiết nội dung
-        </Label>
+        <div className="flex justify-between items-center mb-1">
+          <Label className="text-xs font-semibold text-foreground">
+            Chi tiết nội dung
+          </Label>
+          {showTranslateActions && onTranslateContent && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onTranslateContent}
+              disabled={isTranslatingContent || disabled}
+              className="h-6 px-2 text-[10px] text-primary hover:bg-primary/5 cursor-pointer flex items-center gap-1 font-semibold border border-primary/20"
+            >
+              {isTranslatingContent ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+              <span>Dịch từ Tiếng Việt</span>
+            </Button>
+          )}
+        </div>
         <CmsEditor
           value={content}
           onChange={setContent}
@@ -86,16 +109,31 @@ export function ArticleEditorSection({
             Nhấn <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono border">Esc</kbd> hoặc nút Thu nhỏ để thoát chế độ toàn màn hình
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setIsFullscreen(false)}
-          className="gap-1.5 cursor-pointer"
-        >
-          <Minimize2 className="h-4 w-4" />
-          Thu nhỏ
-        </Button>
+        <div className="flex items-center gap-2">
+          {showTranslateActions && onTranslateContent && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onTranslateContent}
+              disabled={isTranslatingContent || disabled}
+              className="gap-1.5 cursor-pointer text-xs text-primary border-primary/30 hover:bg-primary/5"
+            >
+              {isTranslatingContent ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-4 w-4" />}
+              Dịch từ Tiếng Việt
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFullscreen(false)}
+            className="gap-1.5 cursor-pointer"
+          >
+            <Minimize2 className="h-4 w-4" />
+            Thu nhỏ
+          </Button>
+        </div>
       </div>
 
       {/* Editor container taking full space */}

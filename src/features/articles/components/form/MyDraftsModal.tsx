@@ -77,30 +77,33 @@ export function MyDraftsModal({ open, onOpenChange, onSelectDraft }: MyDraftsMod
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {drafts.map((draft) => (
-                    <TableRow key={draft.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="py-2.5 font-medium text-xs leading-relaxed max-w-[280px] truncate">
-                        {draft.title || <span className="italic text-muted-foreground">(Không có tiêu đề)</span>}
-                      </TableCell>
-                      <TableCell className="py-2.5 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1.5 font-mono">
-                          <Calendar className="h-3.5 w-3.5 opacity-70" />
-                          {dayjs(draft.created_at).format('DD/MM/YYYY HH:mm')}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-2.5 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1 text-[11px] font-semibold text-primary hover:text-primary-hover hover:bg-primary/5 cursor-pointer"
-                          onClick={() => onSelectDraft(draft.id)}
-                        >
-                          Biên tập tiếp
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {drafts.map((draft) => {
+                    const draftTitle = draft.translations?.vi?.title || draft.title
+                    return (
+                      <TableRow key={draft.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell className="py-2.5 font-medium text-xs leading-relaxed max-w-[280px] truncate">
+                          {draftTitle || <span className="italic text-muted-foreground">(Không có tiêu đề)</span>}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1.5 font-mono">
+                            <Calendar className="h-3.5 w-3.5 opacity-70" />
+                            {dayjs(draft.created_at).format('DD/MM/YYYY HH:mm')}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 text-[11px] font-semibold text-primary hover:text-primary-hover hover:bg-primary/5 cursor-pointer"
+                            onClick={() => onSelectDraft(draft.id)}
+                          >
+                            Biên tập tiếp
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

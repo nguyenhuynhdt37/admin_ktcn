@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 import type { Article } from '../types/articles.types'
+import { cn } from '@/lib/utils'
 
 interface ArticleColumnsProps {
   deleted: boolean
@@ -77,10 +78,11 @@ export const getArticleColumns = ({
     cell: ({ row }) => {
       const article = row.original
       const thumbUrl = getMediaUrl(article.thumbnail_object_key)
+      const title = article.translations?.vi?.title || '(Không tiêu đề)'
       return thumbUrl ? (
         <img
           src={thumbUrl}
-          alt={article.title}
+          alt={title}
           className="h-10 w-14 rounded-md object-cover border border-border"
         />
       ) : (
@@ -95,6 +97,8 @@ export const getArticleColumns = ({
     header: 'Bài viết',
     cell: ({ row }) => {
       const article = row.original
+      const title = article.translations?.vi?.title || '(Không tiêu đề)'
+      const slug = article.translations?.vi?.slug || ''
       return (
         <div className="flex flex-col gap-1 min-w-[200px] max-w-[320px]">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -102,33 +106,36 @@ export const getArticleColumns = ({
               to={`/articles/${article.id}/edit`}
               className="font-medium text-sm text-foreground hover:text-primary transition-colors hover:underline truncate block"
             >
-              {article.title}
+              {title}
             </Link>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
             <CornerDownRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-            <span className="truncate">{article.slug}</span>
+            <span className="truncate">{slug}</span>
           </div>
           {article.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
-              {article.tags.slice(0, 3).map((tag) => (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className="text-[10px] py-0 px-1.5 font-normal rounded border-transparent"
-                  style={
-                    tag.color
-                      ? {
-                          backgroundColor: `${tag.color}12`,
-                          color: tag.color,
-                          borderColor: `${tag.color}25`,
-                        }
-                      : undefined
-                  }
-                >
-                  {tag.name}
-                </Badge>
-              ))}
+              {article.tags.slice(0, 3).map((tag) => {
+                const tagName = tag.translations?.vi?.name || tag.name || '(Không tên)'
+                return (
+                  <Badge
+                    key={tag.id}
+                    variant="outline"
+                    className="text-[10px] py-0 px-1.5 font-normal rounded border-transparent"
+                    style={
+                      tag.color
+                        ? {
+                            backgroundColor: `${tag.color}12`,
+                            color: tag.color,
+                            borderColor: `${tag.color}25`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {tagName}
+                  </Badge>
+                )
+              })}
               {article.tags.length > 3 && (
                 <Badge variant="outline" className="text-[10px] py-0 px-1 font-normal text-muted-foreground rounded">
                   +{article.tags.length - 3}
@@ -146,11 +153,40 @@ export const getArticleColumns = ({
     cell: ({ row }) => {
       const category = row.original.category
       return (
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-foreground">{category.name}</span>
+        <div className="flex flex-col text-left">
+          <span className="text-sm font-medium text-foreground">{category?.name || '(Chưa phân loại)'}</span>
           <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-            {category.slug}
+            {category?.slug || ''}
           </span>
+        </div>
+      )
+    }
+  },
+  {
+    id: 'translations',
+    header: 'Bản dịch',
+    cell: ({ row }) => {
+      const isTranslated = row.original.is_translated || {}
+      return (
+        <div className="flex gap-1">
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[9px] py-0 px-1 rounded font-bold border-none",
+              isTranslated.vi ? "bg-emerald-500/10 text-emerald-600" : "bg-slate-100 text-slate-400"
+            )}
+          >
+            VI
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[9px] py-0 px-1 rounded font-bold border-none",
+              isTranslated.en ? "bg-sky-500/10 text-sky-600" : "bg-slate-100 text-slate-400"
+            )}
+          >
+            EN
+          </Badge>
         </div>
       )
     }
@@ -160,26 +196,26 @@ export const getArticleColumns = ({
     header: 'Tác giả',
     cell: ({ row }) => {
       const author = row.original.author
-      const avatarUrl = getMediaUrl(author.avatar_url)
+      const avatarUrl = author ? getMediaUrl(author.avatar_url) : null
       return (
         <div className="flex items-center gap-2">
           {avatarUrl ? (
             <img
               src={avatarUrl}
-              alt={author.full_name}
+              alt={author?.full_name || ''}
               className="h-6 w-6 rounded-full object-cover border border-border"
             />
           ) : (
             <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold border border-border">
-              {author.full_name.charAt(0).toUpperCase()}
+              {author?.full_name?.charAt(0).toUpperCase() || 'U'}
             </div>
           )}
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-semibold text-foreground truncate max-w-[100px]" title={author.full_name}>
-              {author.full_name}
+          <div className="flex flex-col min-w-0 text-left">
+            <span className="text-xs font-semibold text-foreground truncate max-w-[100px]" title={author?.full_name || ''}>
+              {author?.full_name || ''}
             </span>
-            <span className="text-[9px] text-muted-foreground truncate max-w-[100px]" title={author.username}>
-              {author.username}
+            <span className="text-[9px] text-muted-foreground truncate max-w-[100px]" title={author?.username || ''}>
+              {author?.username || ''}
             </span>
           </div>
         </div>
@@ -259,7 +295,7 @@ export const getArticleColumns = ({
     cell: ({ row }) => {
       const article = row.original
       return (
-        <div className="flex flex-col text-xs text-muted-foreground gap-0.5">
+        <div className="flex flex-col text-xs text-muted-foreground gap-0.5 text-left">
           <span className="font-semibold text-foreground/80">
             {dayjs(article.created_at).format('DD/MM/YYYY')}
           </span>
@@ -285,7 +321,7 @@ export const getArticleColumns = ({
     header: () => <div className="text-right">Thao tác</div>,
     cell: ({ row }) => {
       const article = row.original
-      const isAuthor = currentUser?.id === article.author.id
+      const isAuthor = currentUser?.id === article.author_id || currentUser?.id === article.author?.id
       return (
         <div className="text-right">
           <DropdownMenu>

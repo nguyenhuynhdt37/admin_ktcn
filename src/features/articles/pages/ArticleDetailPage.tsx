@@ -1,27 +1,32 @@
-import { useParams, Link } from 'react-router'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { articleService } from '../services/articleService'
-import { getMediaUrl } from '../utils/media'
-import { SEO_CONFIG } from '../constants'
-import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/components/ui/card'
+import { useParams, useNavigate, Link } from 'react-router'
 import {
   ArrowLeft,
   Edit,
   Eye,
   Calendar,
   User,
-  Globe,
   Tag,
-  ChevronRight,
+  Globe,
   Info,
-  ShieldAlert
+  ChevronRight,
+  Loader2
 } from 'lucide-react'
 import dayjs from 'dayjs'
 
+import { Button } from '@/shared/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Badge } from '@/shared/components/ui/badge'
+import { articleService } from '../services/articleService'
+import { getMediaUrl } from '../utils/media'
+import { SEO_CONFIG } from '../constants'
+import { cn } from '@/lib/utils'
+
 export default function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'vi' | 'en'>('vi')
 
   // Fetch article detail
   const { data: article, isLoading, error } = useQuery({
@@ -30,10 +35,45 @@ export default function ArticleDetailPage() {
     enabled: !!id,
   })
 
+  // Tính toán dữ liệu hiển thị theo ngôn ngữ chọn
+  const displayData = useMemo(() => {
+    if (!article) return null
+
+    if (activeTab === 'vi') {
+      const vi = article.translations?.vi || {}
+      return {
+        title: vi.title || article.translations?.vi?.title || '',
+        slug: vi.slug || '',
+        excerpt: vi.excerpt || '',
+        content: vi.content || '',
+        seo_title: vi.seo_title || '',
+        seo_description: vi.seo_description || '',
+        canonical_url: vi.canonical_url || '',
+        robots: vi.robots || 'index, follow',
+        og_title: vi.og_title || '',
+        og_description: vi.og_description || '',
+      }
+    } else {
+      const en = article.translations?.en || {}
+      return {
+        title: en.title || '',
+        slug: en.slug || '',
+        excerpt: en.excerpt || '',
+        content: en.content || '',
+        seo_title: en.seo_title || '',
+        seo_description: en.seo_description || '',
+        canonical_url: en.canonical_url || '',
+        robots: en.robots || 'index, follow',
+        og_title: en.og_title || '',
+        og_description: en.og_description || '',
+      }
+    }
+  }, [article, activeTab])
+
   if (isLoading) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center space-y-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground animate-pulse font-medium">Đang tải bản xem trước...</p>
       </div>
     )
@@ -62,21 +102,20 @@ export default function ArticleDetailPage() {
   const coverUrl = getMediaUrl(article.cover_object_key || article.thumbnail_object_key)
   const fallbackCover = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80'
 
-  // SEO Fields (with fallback logic matching backend & frontend auto-sync)
+  // SEO Fields
   const maxTitleLength = Math.max(0, SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH - SEO_CONFIG.SUFFIX.length)
-  const rawSeoTitle = article.seo_title || ''
+  const rawSeoTitle = displayData?.seo_title || ''
   
-  // Loại bỏ hậu tố cũ nếu đã lưu ở DB (để tránh lặp hậu tố)
   let cleanSeoTitle = rawSeoTitle
   if (cleanSeoTitle.endsWith(SEO_CONFIG.SUFFIX)) {
     cleanSeoTitle = cleanSeoTitle.slice(0, -SEO_CONFIG.SUFFIX.length)
   }
 
-  const baseTitleFallback = article.title ? (article.title.length > maxTitleLength ? article.title.slice(0, maxTitleLength) : article.title) : ''
+  const baseTitleFallback = displayData?.title ? (displayData.title.length > maxTitleLength ? displayData.title.slice(0, maxTitleLength) : displayData.title) : ''
   const finalSeoTitle = (cleanSeoTitle.trim() || baseTitleFallback) + SEO_CONFIG.SUFFIX
   
-  const fallbackDesc = article.excerpt || (article.content ? article.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155) : 'Mô tả chi tiết bài viết...')
-  const finalSeoDesc = article.seo_description || fallbackDesc
+  const fallbackDesc = displayData?.excerpt || (displayData?.content ? displayData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155) : 'Mô tả chi tiết bài viết...')
+  const finalSeoDesc = displayData?.seo_description || fallbackDesc
 
   const renderStatusBadge = (status: typeof article.status) => {
     switch (status) {
@@ -94,7 +133,7 @@ export default function ArticleDetailPage() {
         )
       case 'ARCHIVED':
         return (
-          <Badge className="bg-zinc-500/10 text-zinc-600 border border-zinc-500/20 py-0.5 px-2.5 rounded-full hover:bg-zinc-500/10 shadow-none font-semibold text-[10px]">
+          <Badge className="bg-zinc-500/10 text-zinc-600 border border-zinc-500/20 py-0.5 px-2.5 rounded-full hover:bg-sky-500/10 shadow-none font-semibold text-[10px]">
             Lưu trữ (Archived)
           </Badge>
         )
@@ -104,7 +143,7 @@ export default function ArticleDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       {/* SCOPED CSS FOR HTML CONTENT PRECISE RENDERING */}
       <style>{`
         .article-html-view h2 {
@@ -235,8 +274,33 @@ export default function ArticleDetailPage() {
         {/* LEFT COLUMN - Article View (8/12) */}
         <div className="lg:col-span-8 space-y-6">
           <Card className="bg-card border shadow-xs overflow-hidden">
+            {/* Language Selection Header */}
+            <div className="px-6 pt-4 border-b flex items-center justify-between bg-slate-50/50">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ngôn ngữ hiển thị bản xem trước</span>
+              <div className="flex border bg-muted/30 rounded-lg p-0.5 gap-0.5 mb-2">
+                {[
+                  { code: 'vi' as const, label: 'Tiếng Việt', flag: '🇻🇳' },
+                  { code: 'en' as const, label: 'Tiếng Anh', flag: '🇬🇧' },
+                ].map((tab) => (
+                  <button
+                    key={tab.code}
+                    type="button"
+                    onClick={() => setActiveTab(tab.code)}
+                    className={cn(
+                      "flex items-center gap-1 py-1 px-2.5 rounded-md text-[10px] font-bold transition-all cursor-pointer",
+                      activeTab === tab.code
+                        ? "bg-card text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <span>{tab.flag}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="p-6 md:p-8 space-y-6">
-              
               {/* Category Breadcrumb & Publish Status */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-border/60">
                 <span className="text-xs font-semibold text-primary uppercase tracking-wider">
@@ -257,60 +321,71 @@ export default function ArticleDetailPage() {
                 </div>
               </div>
 
-              {/* Title */}
-              <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight leading-snug text-left font-sans">
-                {article.title}
-              </h1>
+              {displayData?.title ? (
+                <>
+                  {/* Title */}
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight leading-snug text-left font-sans">
+                    {displayData.title}
+                  </h1>
 
-              {/* Metadata Info Bar */}
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground font-medium">
-                <div className="flex items-center gap-1">
-                  <User className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Tác giả: <strong className="font-semibold text-foreground/80">{article.author?.full_name}</strong></span>
-                </div>
-                <span className="text-slate-300 hidden sm:inline">•</span>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Đăng lúc: {dayjs(article.published_at || article.created_at).format('HH:mm - DD/MM/YYYY')}</span>
-                </div>
-                <span className="text-slate-300 hidden sm:inline">•</span>
-                <div className="flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{article.view_count.toLocaleString()} lượt xem</span>
-                </div>
-              </div>
+                  {/* Metadata Info Bar */}
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground font-medium">
+                    <div className="flex items-center gap-1">
+                      <User className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Tác giả: <strong className="font-semibold text-foreground/80">{article.author?.full_name}</strong></span>
+                    </div>
+                    <span className="text-slate-300 hidden sm:inline">•</span>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      <span>Đăng lúc: {dayjs(article.published_at || article.created_at).format('HH:mm - DD/MM/YYYY')}</span>
+                    </div>
+                    <span className="text-slate-300 hidden sm:inline">•</span>
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{article.view_count.toLocaleString()} lượt xem</span>
+                    </div>
+                  </div>
 
-              {/* Excerpt */}
-              {article.excerpt && (
-                <div className="bg-muted/40 border border-border/80 rounded-lg p-4 text-left">
-                  <p className="text-sm text-foreground/80 leading-relaxed font-medium italic">
-                    {article.excerpt}
+                  {/* Excerpt */}
+                  {displayData.excerpt && (
+                    <div className="bg-muted/40 border border-border/80 rounded-lg p-4 text-left">
+                      <p className="text-sm text-foreground/80 leading-relaxed font-medium italic">
+                        {displayData.excerpt}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Cover Banner Image */}
+                  <div className="rounded-lg overflow-hidden border bg-muted/20 relative aspect-video shadow-3xs max-h-[360px]">
+                    <img
+                      src={coverUrl || fallbackCover}
+                      alt={displayData.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = fallbackCover
+                      }}
+                    />
+                  </div>
+
+                  {/* Article Content Render */}
+                  <div className="article-html-view text-left">
+                    {displayData.content ? (
+                      <div dangerouslySetInnerHTML={{ __html: displayData.content }} />
+                    ) : (
+                      <p className="text-muted-foreground italic py-16 text-center border border-dashed rounded-lg">
+                        Nội dung bài viết rỗng.
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="py-20 text-center text-muted-foreground border border-dashed rounded-lg bg-slate-50/50">
+                  <Info className="h-10 w-10 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm italic">
+                    {activeTab === 'vi' ? 'Bài viết chưa có tiêu đề Tiếng Việt.' : 'Bài viết chưa cập nhật bản dịch Tiếng Anh.'}
                   </p>
                 </div>
               )}
-
-              {/* Cover Banner Image */}
-              <div className="rounded-lg overflow-hidden border bg-muted/20 relative aspect-video shadow-3xs max-h-[360px]">
-                <img
-                  src={coverUrl || fallbackCover}
-                  alt={article.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = fallbackCover
-                  }}
-                />
-              </div>
-
-              {/* Article Content Render */}
-              <div className="article-html-view text-left">
-                {article.content ? (
-                  <div dangerouslySetInnerHTML={{ __html: article.content }} />
-                ) : (
-                  <p className="text-muted-foreground italic py-16 text-center border border-dashed rounded-lg">
-                    Chưa có nội dung soạn thảo cho bài viết này.
-                  </p>
-                )}
-              </div>
 
               {/* Tags (Round outlined badges) */}
               {article.tags && article.tags.length > 0 && (
@@ -320,15 +395,21 @@ export default function ArticleDetailPage() {
                     TỪ KHÓA:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {article.tags.map((tag) => (
-                      <Badge
-                        key={tag.id}
-                        variant="outline"
-                        className="text-[11px] font-normal border-slate-200 text-slate-600 bg-slate-50/50 hover:bg-slate-100 cursor-pointer shadow-none px-2.5 py-0.5 rounded-full"
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
+                    {article.tags.map((tag) => {
+                      const tagName = activeTab === 'vi'
+                        ? (tag.translations?.vi?.name || tag.name || '')
+                        : (tag.translations?.en?.name || tag.translations?.vi?.name || tag.name || '')
+                      
+                      return tagName ? (
+                        <Badge
+                          key={tag.id}
+                          variant="outline"
+                          className="text-[11px] font-normal border-slate-200 text-slate-600 bg-slate-50/50 hover:bg-slate-100 cursor-pointer shadow-none px-2.5 py-0.5 rounded-full"
+                        >
+                          {tagName}
+                        </Badge>
+                      ) : null
+                    })}
                   </div>
                 </div>
               )}
@@ -343,7 +424,7 @@ export default function ArticleDetailPage() {
             <CardHeader className="bg-muted/15 p-4 border-b border-border/80 flex flex-row items-center gap-2 space-y-0">
               <Globe className="h-4.5 w-4.5 text-primary" />
               <CardTitle className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                Phân tích SEO & Meta
+                Phân tích SEO & Meta ({activeTab.toUpperCase()})
               </CardTitle>
             </CardHeader>
             
@@ -361,7 +442,7 @@ export default function ArticleDetailPage() {
                   </span>
                 </div>
                 <div className="text-xs bg-muted/30 p-2.5 rounded border font-mono break-all leading-normal text-slate-700 dark:text-slate-300">
-                  {finalSeoTitle}
+                  {finalSeoTitle || '-'}
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-normal italic">
                   * Hậu tố thương hiệu được tự động ghép và không lưu trong database.
@@ -381,7 +462,7 @@ export default function ArticleDetailPage() {
                   </span>
                 </div>
                 <div className="text-xs bg-muted/30 p-2.5 rounded border text-muted-foreground leading-relaxed">
-                  {finalSeoDesc}
+                  {finalSeoDesc || '-'}
                 </div>
               </div>
 
@@ -391,7 +472,7 @@ export default function ArticleDetailPage() {
                   Chỉ thị Robots (robots)
                 </div>
                 <div className="text-xs bg-muted/30 p-2 rounded border font-mono text-slate-700 dark:text-slate-300">
-                  {article.robots || 'index, follow'}
+                  {displayData?.robots || 'index, follow'}
                 </div>
               </div>
 
@@ -401,11 +482,11 @@ export default function ArticleDetailPage() {
                   Đường dẫn gốc (canonical_url)
                 </div>
                 <div className="text-xs bg-muted/30 p-2 rounded border font-mono break-all leading-normal text-slate-700 dark:text-slate-300">
-                  {article.canonical_url || `https://kcnt.vinhuni.edu.vn/articles/${article.slug}`}
+                  {displayData?.canonical_url || (displayData?.slug ? `https://kcnt.vinhuni.edu.vn/articles/${displayData.slug}` : '-')}
                 </div>
               </div>
 
-              {/* Open Graph Preview (Facebook share simulation card) */}
+              {/* Open Graph Preview */}
               <div className="space-y-2">
                 <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Thẻ OpenGraph MXH (Facebook/Zalo)
@@ -415,7 +496,7 @@ export default function ArticleDetailPage() {
                   <div className="aspect-video bg-muted/10 relative border-b border-border/40">
                     <img
                       src={coverUrl || fallbackCover}
-                      alt={article.og_title || article.title}
+                      alt={displayData?.og_title || displayData?.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.currentTarget.src = fallbackCover
@@ -427,10 +508,10 @@ export default function ArticleDetailPage() {
                       kcnt.vinhuni.edu.vn
                     </div>
                     <div className="text-xs font-bold text-foreground line-clamp-1">
-                      {article.og_title || article.title}
+                      {displayData?.og_title || displayData?.title || '-'}
                     </div>
                     <div className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                      {article.og_description || article.excerpt || 'Đọc chi tiết bài viết trên website Trường Kỹ thuật và Công nghệ - Đại học Vinh.'}
+                      {displayData?.og_description || displayData?.excerpt || 'Đọc chi tiết bài viết trên website Trường Kỹ thuật và Công nghệ - Đại học Vinh.'}
                     </div>
                   </div>
                 </div>

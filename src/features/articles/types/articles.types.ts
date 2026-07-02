@@ -4,11 +4,22 @@ export interface CategoryInfo {
   slug: string
 }
 
-export interface TagInfo {
-  id: string
+export interface TagTranslation {
   name: string
   slug: string
+  description?: string | null
+}
+
+export interface TagInfo {
+  id: string
   color?: string
+  is_translated?: Record<string, boolean>
+  translations?: {
+    vi: TagTranslation
+    en: TagTranslation
+  }
+  name?: string // Mẹo: Fallback dùng cho hiển thị nhanh
+  slug?: string
 }
 
 export interface AuthorInfo {
@@ -18,12 +29,24 @@ export interface AuthorInfo {
   avatar_url?: string | null
 }
 
-export interface Article {
-  id: string
+export interface ArticleTranslation {
   title: string
   slug: string
   excerpt: string
-  content?: string | null
+  content: string | null
+  seo_title: string | null
+  seo_description: string | null
+  canonical_url: string | null
+  robots: string | null
+  og_title: string | null
+  og_description: string | null
+  og_image: string | null
+}
+
+export interface Article {
+  id: string
+  category_id: string
+  author_id: string
   thumbnail_object_key?: string | null
   cover_object_key?: string | null
   category: CategoryInfo
@@ -34,17 +57,18 @@ export interface Article {
   is_pinned: boolean
   is_draft: boolean // Phân tách bản nháp
   view_count: number
+  word_count: number
+  reading_time: number
   created_at: string
+  updated_at: string
   published_at?: string | null
   publish_at?: string | null
   expire_at?: string | null
-  seo_title?: string | null
-  seo_description?: string | null
-  canonical_url?: string | null
-  robots?: string | null
-  og_title?: string | null
-  og_description?: string | null
-  og_image?: string | null
+  is_translated: Record<string, boolean>
+  translations: {
+    vi: ArticleTranslation
+    en: ArticleTranslation
+  }
 }
 
 export interface ArticleListParams {
@@ -65,6 +89,7 @@ export interface ArticleListParams {
   deleted?: boolean
   sort_by?: 'title' | 'created_at' | 'updated_at' | 'published_at' | 'view_count' | 'sort_order'
   sort_dir?: 'asc' | 'desc'
+  lang?: string // Ngôn ngữ dùng để tìm kiếm/sắp xếp
 }
 
 export interface ArticleListResponse {
@@ -94,9 +119,29 @@ export interface AuthorSearchItem {
 
 export interface TagSearchItem {
   id: string
-  name: string
-  slug: string
   color?: string
+  is_translated?: Record<string, boolean>
+  translations?: {
+    vi: TagTranslation
+    en: TagTranslation
+  }
+  name?: string // Fallback dùng cho hiển thị nhanh
+  slug?: string
+}
+
+export interface Tag {
+  id: string
+  color?: string
+  usage_count: number
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  is_translated: Record<string, boolean>
+  translations: {
+    vi: TagTranslation
+    en: TagTranslation
+  }
 }
 
 export interface ArticleStats {
@@ -121,10 +166,6 @@ export interface BulkStatusResponse {
 }
 
 export interface ArticleCreatePayload {
-  title: string
-  slug?: string | null
-  excerpt?: string | null
-  content?: string | null
   category_id?: string | null
   tag_ids?: string[] | null
   status?: 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'
@@ -135,11 +176,8 @@ export interface ArticleCreatePayload {
   cover_object_key?: string | null
   is_featured?: boolean
   is_pinned?: boolean
-  seo_title?: string | null
-  seo_description?: string | null
-  canonical_url?: string | null
-  robots?: string | null
-  og_title?: string | null
-  og_description?: string | null
-  og_image?: string | null
+  translations: {
+    vi: Partial<ArticleTranslation>
+    en?: Partial<ArticleTranslation> | null
+  }
 }

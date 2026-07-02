@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip'
-import type { Article, ArticleListParams } from '../types/articles.types'
+import type { Article } from '../types/articles.types'
 import { useAuthStore } from '@/stores/authStore'
 
 interface ArticleTableProps {
@@ -53,10 +53,8 @@ export function ArticleTable({
   // Format thumbnail URL or return placeholders
   const getThumbnailUrl = (key?: string | null) => {
     if (!key) return null
-    // Đối với S3 key hoặc URL đầy đủ
     if (key.startsWith('http://') || key.startsWith('https://')) return key
-    // Giả lập từ môi trường, có thể config CDN hoặc link tương đối
-    return `https://images.unsplash.com/photo-1516116211223-5c359a36298a?w=100&auto=format&fit=crop&q=60` // Mẫu đẹp mắt
+    return `https://images.unsplash.com/photo-1516116211223-5c359a36298a?w=100&auto=format&fit=crop&q=60`
   }
 
   const renderStatusBadge = (status: Article['status']) => {
@@ -167,16 +165,16 @@ export function ArticleTable({
         <TableHeader className="bg-muted/30">
           <TableRow>
             <TableHead className="w-[80px]">Ảnh</TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/40 transition-colors select-none" onClick={() => onSort('title')}>
+            <TableHead className="cursor-pointer hover:bg-muted/40 transition-colors select-none text-left" onClick={() => onSort('title')}>
               Bài viết {renderSortIndicator('title')}
             </TableHead>
-            <TableHead className="w-[140px]">Danh mục</TableHead>
-            <TableHead className="w-[160px]">Tác giả</TableHead>
+            <TableHead className="w-[140px] text-left">Danh mục</TableHead>
+            <TableHead className="w-[160px] text-left">Tác giả</TableHead>
             <TableHead className="w-[110px] text-center cursor-pointer hover:bg-muted/40 transition-colors select-none" onClick={() => onSort('view_count')}>
               Xem {renderSortIndicator('view_count')}
             </TableHead>
-            <TableHead className="w-[120px]">Trạng thái</TableHead>
-            <TableHead className="w-[150px] cursor-pointer hover:bg-muted/40 transition-colors select-none" onClick={() => onSort('created_at')}>
+            <TableHead className="w-[120px] text-left">Trạng thái</TableHead>
+            <TableHead className="w-[150px] cursor-pointer hover:bg-muted/40 transition-colors select-none text-left" onClick={() => onSort('created_at')}>
               Thời gian {renderSortIndicator('created_at')}
             </TableHead>
             <TableHead className="w-[100px] text-right">Thao tác</TableHead>
@@ -186,7 +184,9 @@ export function ArticleTable({
           <TooltipProvider>
             {articles.map((article) => {
               const thumbUrl = getThumbnailUrl(article.thumbnail_object_key)
-              const isAuthor = user?.id === article.author.id
+              const isAuthor = user?.id === article.author_id || user?.id === article.author?.id
+              const title = article.translations?.vi?.title || article.title || '(Chưa có tiêu đề)'
+              const slug = article.translations?.vi?.slug || article.slug || ''
               
               return (
                 <TableRow key={article.id} className="hover:bg-muted/10 transition-colors">
@@ -195,7 +195,7 @@ export function ArticleTable({
                     {thumbUrl ? (
                       <img
                         src={thumbUrl}
-                        alt={article.title}
+                        alt={title}
                         className="h-10 w-14 rounded-md object-cover border border-border/80 shadow-2xs hover:scale-105 transition-transform"
                       />
                     ) : (
@@ -206,7 +206,7 @@ export function ArticleTable({
                   </TableCell>
 
                   {/* Chi tiết bài viết & Tags */}
-                  <TableCell className="max-w-[300px]">
+                  <TableCell className="max-w-[300px] text-left">
                     <div className="flex flex-col gap-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {article.is_pinned && (
@@ -233,38 +233,41 @@ export function ArticleTable({
                           to={`/articles/${article.id}/edit`}
                           className="font-medium text-sm text-foreground hover:text-primary transition-colors hover:underline truncate block"
                         >
-                          {article.title}
+                          {title}
                         </Link>
                       </div>
                       
                       <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
                         <CornerDownRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-                        <span className="truncate" title={article.slug}>
-                          {article.slug}
+                        <span className="truncate" title={slug}>
+                          {slug}
                         </span>
                       </div>
 
                       {/* Hiển thị Tags */}
                       {article.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {article.tags.slice(0, 3).map((tag) => (
-                            <Badge
-                              key={tag.id}
-                              variant="outline"
-                              className="text-[10px] py-0 px-1.5 font-normal rounded border-transparent"
-                              style={
-                                tag.color
-                                  ? {
-                                      backgroundColor: `${tag.color}12`,
-                                      color: tag.color,
-                                      borderColor: `${tag.color}25`,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              {tag.name}
-                            </Badge>
-                          ))}
+                          {article.tags.slice(0, 3).map((tag) => {
+                            const tagName = tag.translations?.vi?.name || tag.name || '(Không tên)'
+                            return (
+                              <Badge
+                                key={tag.id}
+                                variant="outline"
+                                className="text-[10px] py-0 px-1.5 font-normal rounded border-transparent"
+                                style={
+                                  tag.color
+                                    ? {
+                                        backgroundColor: `${tag.color}12`,
+                                        color: tag.color,
+                                        borderColor: `${tag.color}25`,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                {tagName}
+                              </Badge>
+                            )
+                          })}
                           {article.tags.length > 3 && (
                             <Badge variant="outline" className="text-[10px] py-0 px-1 font-normal text-muted-foreground rounded">
                               +{article.tags.length - 3}
@@ -276,19 +279,19 @@ export function ArticleTable({
                   </TableCell>
 
                   {/* Danh mục */}
-                  <TableCell>
+                  <TableCell className="text-left">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-foreground">{article.category.name}</span>
+                      <span className="text-sm font-medium text-foreground">{article.category?.name || '(Chưa phân loại)'}</span>
                       <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                        {article.category.slug}
+                        {article.category?.slug || ''}
                       </span>
                     </div>
                   </TableCell>
 
                   {/* Tác giả */}
-                  <TableCell>
+                  <TableCell className="text-left">
                     <div className="flex items-center gap-2">
-                      {article.author.avatar_url ? (
+                      {article.author?.avatar_url ? (
                         <img
                           src={article.author.avatar_url}
                           alt={article.author.full_name}
@@ -296,15 +299,15 @@ export function ArticleTable({
                         />
                       ) : (
                         <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold border border-border">
-                          {article.author.full_name.charAt(0).toUpperCase()}
+                          {article.author?.full_name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                       )}
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-semibold text-foreground truncate max-w-[100px]" title={article.author.full_name}>
-                          {article.author.full_name}
+                        <span className="text-xs font-semibold text-foreground truncate max-w-[100px]" title={article.author?.full_name}>
+                          {article.author?.full_name}
                         </span>
-                        <span className="text-[9px] text-muted-foreground truncate max-w-[100px]" title={article.author.username}>
-                          {article.author.username}
+                        <span className="text-[9px] text-muted-foreground truncate max-w-[100px]" title={article.author?.username}>
+                          {article.author?.username}
                         </span>
                       </div>
                     </div>
@@ -316,10 +319,10 @@ export function ArticleTable({
                   </TableCell>
 
                   {/* Trạng thái */}
-                  <TableCell>{renderStatusBadge(article.status)}</TableCell>
+                  <TableCell className="text-left">{renderStatusBadge(article.status)}</TableCell>
 
                   {/* Thời gian */}
-                  <TableCell>
+                  <TableCell className="text-left">
                     <div className="flex flex-col text-xs text-muted-foreground gap-0.5">
                       <span className="font-semibold text-foreground/80">
                         {dayjs(article.created_at).format('DD/MM/YYYY')}

@@ -10,6 +10,7 @@ import type {
   BulkStatusResponse,
   ArticleCreatePayload,
   Article,
+  TagTranslation
 } from '../types/articles.types'
 
 export const articleService = {
@@ -18,19 +19,18 @@ export const articleService = {
     
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        // Gửi mảng tag_ids trực tiếp để Axios tự serialize (Cách 1 của Backend)
         cleanedParams[key] = value
       }
     })
 
-    const { data } = await httpClient.get<ArticleListResponse>('/articles', {
+    const { data } = await httpClient.get<ArticleListResponse>('/admin/articles', {
       params: cleanedParams,
     })
     return data
   },
 
   searchCategories: async (search: string): Promise<CategorySearchItem[]> => {
-    const { data } = await httpClient.get<CategorySearchItem[]>('/categories', {
+    const { data } = await httpClient.get<CategorySearchItem[]>('/admin/categories', {
       params: { search },
     })
     return data
@@ -52,7 +52,7 @@ export const articleService = {
   },
 
   searchTags: async (search: string): Promise<TagSearchItem[]> => {
-    const { data } = await httpClient.get<{ items: TagSearchItem[] } | TagSearchItem[]>('/tags', {
+    const { data } = await httpClient.get<{ items: TagSearchItem[] } | TagSearchItem[]>('/admin/tags', {
       params: {
         page: 1,
         limit: 10,
@@ -67,47 +67,47 @@ export const articleService = {
   },
 
   delete: async (id: string): Promise<{ success: boolean }> => {
-    const { data } = await httpClient.delete<{ success: boolean }>(`/articles/${id}`)
+    const { data } = await httpClient.delete<{ success: boolean }>(`/admin/articles/${id}`)
     return data
   },
 
   restore: async (id: string): Promise<{ success: boolean }> => {
-    const { data } = await httpClient.post<{ success: boolean }>(`/articles/${id}/restore`)
+    const { data } = await httpClient.post<{ success: boolean }>(`/admin/articles/${id}/restore`)
     return data
   },
 
   archive: async (id: string): Promise<any> => {
-    const { data } = await httpClient.patch<any>(`/articles/${id}/archive`)
+    const { data } = await httpClient.patch<any>(`/admin/articles/${id}/archive`)
     return data
   },
 
   publish: async (id: string): Promise<any> => {
-    const { data } = await httpClient.patch<any>(`/articles/${id}/publish`)
+    const { data } = await httpClient.patch<any>(`/admin/articles/${id}/publish`)
     return data
   },
 
   getStats: async (): Promise<ArticleStats> => {
-    const { data } = await httpClient.get<ArticleStats>('/articles/stats')
+    const { data } = await httpClient.get<ArticleStats>('/admin/articles/stats')
     return data
   },
 
   bulkStatus: async (payload: BulkStatusPayload): Promise<BulkStatusResponse> => {
-    const { data } = await httpClient.post<BulkStatusResponse>('/articles/bulk-status', payload)
+    const { data } = await httpClient.post<BulkStatusResponse>('/admin/articles/bulk-status', payload)
     return data
   },
 
   updateAttributes: async (id: string, payload: { is_featured?: boolean; is_pinned?: boolean }): Promise<Article> => {
-    const { data } = await httpClient.patch<Article>(`/articles/${id}/attributes`, payload)
+    const { data } = await httpClient.patch<Article>(`/admin/articles/${id}/attributes`, payload)
     return data
   },
 
   listCategories: async (): Promise<CategorySearchItem[]> => {
-    const { data } = await httpClient.get<CategorySearchItem[]>('/categories')
+    const { data } = await httpClient.get<CategorySearchItem[]>('/admin/categories')
     return data
   },
 
   listTags: async (): Promise<TagSearchItem[]> => {
-    const { data } = await httpClient.get<{ items: TagSearchItem[] } | TagSearchItem[]>('/tags', {
+    const { data } = await httpClient.get<{ items: TagSearchItem[] } | TagSearchItem[]>('/admin/tags', {
       params: { limit: 100 },
     })
     if (Array.isArray(data)) {
@@ -117,17 +117,17 @@ export const articleService = {
   },
 
   create: async (payload: ArticleCreatePayload): Promise<Article> => {
-    const { data } = await httpClient.post<Article>('/articles', payload)
+    const { data } = await httpClient.post<Article>('/admin/articles', payload)
     return data
   },
 
   update: async (id: string, payload: Partial<ArticleCreatePayload>): Promise<Article> => {
-    const { data } = await httpClient.put<Article>(`/articles/${id}`, payload)
+    const { data } = await httpClient.put<Article>(`/admin/articles/${id}`, payload)
     return data
   },
 
   getDetail: async (id: string): Promise<Article> => {
-    const { data } = await httpClient.get<Article>(`/articles/${id}`)
+    const { data } = await httpClient.get<Article>(`/admin/articles/${id}`)
     return data
   },
 
@@ -142,25 +142,33 @@ export const articleService = {
     return data
   },
 
-  createTag: async (payload: { name: string; color?: string; description?: string; is_active?: boolean }): Promise<TagSearchItem> => {
-    const { data } = await httpClient.post<TagSearchItem>('/tags', payload)
+  createTag: async (payload: {
+    color?: string
+    sort_order?: number
+    is_active?: boolean
+    translations: {
+      vi: TagTranslation
+      en?: TagTranslation | null
+    }
+  }): Promise<TagSearchItem> => {
+    const { data } = await httpClient.post<TagSearchItem>('/admin/tags', payload)
     return data
   },
 
   checkSlug: async (slug: string): Promise<{ available: boolean; suggested_slug: string }> => {
-    const { data } = await httpClient.get<{ available: boolean; suggested_slug: string }>('/articles/check-slug', {
+    const { data } = await httpClient.get<{ available: boolean; suggested_slug: string }>('/admin/articles/check-slug', {
       params: { slug }
     })
     return data
   },
 
   listMyDrafts: async (params?: { page?: number; page_size?: number }): Promise<ArticleListResponse> => {
-    const { data } = await httpClient.get<ArticleListResponse>('/articles/drafts', { params })
+    const { data } = await httpClient.get<ArticleListResponse>('/admin/articles/drafts', { params })
     return data
   },
 
   countMyDrafts: async (): Promise<{ count: number }> => {
-    const { data } = await httpClient.get<{ count: number }>('/articles/drafts/count')
+    const { data } = await httpClient.get<{ count: number }>('/admin/articles/drafts/count')
     return data
   },
 }

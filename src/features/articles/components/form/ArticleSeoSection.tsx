@@ -81,50 +81,6 @@ export function ArticleSeoSection({
   setIsSeoDescriptionOverridden,
 }: ArticleSeoSectionProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-
-  // AI Gen SEO
-  const handleGenerateSEO = async () => {
-    if (disabled) return
-    if (!title.trim()) {
-      toast.error('Vui lòng nhập Tiêu đề bài viết trước khi sinh SEO.')
-      return
-    }
-
-    // Xác nhận ghi đè nếu admin đã nhập thủ công trước đó hoặc đã bị override
-    if (seoTitle.trim() || seoDescription.trim()) {
-      const confirmGen = window.confirm(
-        'Bạn đã nhập thông tin SEO thủ công. Sinh SEO bằng AI sẽ ghi đè lên các trường này. Bạn có chắc chắn muốn tiếp tục?'
-      )
-      if (!confirmGen) return
-    }
-
-    setIsGenerating(true)
-    try {
-      const response = await httpClient.post('/ai/generate-seo', {
-        title: title,
-        description: cleanHtml(content).slice(0, 500) || excerpt || '',
-        category_name: categoryName,
-      })
-      const resData = response.data
-
-      // Khi sinh SEO thành công bằng AI, cập nhật giá trị và đánh dấu là ghi đè thủ công (manual override)
-      setSeoTitle(resData.seo_title || '')
-      setIsSeoTitleOverridden(true)
-      setSeoDescription(resData.seo_description || '')
-      setIsSeoDescriptionOverridden(true)
-      toast.success('Đã tự động tạo các thẻ SEO tối ưu bằng AI!')
-    } catch (error: any) {
-      const errorCode = error?.response?.data?.error_code
-      if (errorCode === 'AI_BUDGET_EXCEEDED') {
-        toast.error('Hạn mức AI tháng của hệ thống đã dùng hết. Vui lòng liên hệ quản trị viên.')
-      } else {
-        toast.error(error?.response?.data?.message || 'Sinh SEO bằng AI thất bại. Vui lòng kiểm tra lại API Key.')
-      }
-    } finally {
-      setIsGenerating(false)
-    }
-  }
 
   const maxTitleLength = Math.max(0, SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH - SEO_CONFIG.SUFFIX.length)
 
@@ -145,21 +101,6 @@ export function ArticleSeoSection({
             <Globe className="h-4 w-4 text-primary" />
             Cấu hình SEO Cơ bản
           </h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 border-primary/30 text-xs text-primary hover:bg-primary/10 cursor-pointer"
-            onClick={handleGenerateSEO}
-            disabled={isGenerating || disabled}
-          >
-            {isGenerating ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            Sinh SEO bằng AI
-          </Button>
         </div>
 
         {/* Live Google Search Preview Card */}
@@ -191,7 +132,7 @@ export function ArticleSeoSection({
                   titleCharCount > SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH ? 'text-destructive font-semibold' : 'text-muted-foreground'
                 )}
               >
-                {titleCharCount}/{SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH} ký tự {isSeoTitleOverridden ? '(thủ công)' : '(tự sinh)'}
+                {titleCharCount}/{SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH} ký tự (tự sinh)
               </span>
             </div>
             <Input
@@ -199,9 +140,9 @@ export function ArticleSeoSection({
               placeholder="Nhập tiêu đề SEO..."
               value={seoTitle}
               onChange={(e) => setSeoTitle(e.target.value)}
-              disabled={disabled}
+              disabled={true}
               maxLength={maxTitleLength}
-              className="h-10 text-sm"
+              className="h-10 text-sm bg-muted/30 cursor-not-allowed"
             />
             <p className="text-[10px] text-muted-foreground/60 leading-normal">
               Hệ thống sẽ tự động ghép thêm hậu tố thương hiệu "{SEO_CONFIG.SUFFIX}" khi hiển thị.
@@ -219,7 +160,7 @@ export function ArticleSeoSection({
                   descCharCount > SEO_CONFIG.MAX_DESCRIPTION_LENGTH ? 'text-destructive font-semibold' : 'text-muted-foreground'
                 )}
               >
-                {descCharCount}/{SEO_CONFIG.MAX_DESCRIPTION_LENGTH} ký tự {isSeoDescriptionOverridden ? '(thủ công)' : '(tự sinh)'}
+                {descCharCount}/{SEO_CONFIG.MAX_DESCRIPTION_LENGTH} ký tự (tự sinh)
               </span>
             </div>
             <Textarea
@@ -227,8 +168,8 @@ export function ArticleSeoSection({
               placeholder="Nhập đoạn trích ngắn cho công cụ tìm kiếm..."
               value={seoDescription}
               onChange={(e) => setSeoDescription(e.target.value)}
-              disabled={disabled}
-              className="min-h-20 text-sm resize-none"
+              disabled={true}
+              className="min-h-20 text-sm resize-none bg-muted/30 cursor-not-allowed"
             />
           </div>
         </div>
@@ -274,8 +215,8 @@ export function ArticleSeoSection({
                   <Label htmlFor="robots" className="text-[11px] font-semibold text-foreground">
                     Cấu hình Robots (robots)
                   </Label>
-                  <Select value={robots} onValueChange={setRobots} disabled={disabled}>
-                    <SelectTrigger id="robots" className="h-9 text-xs cursor-pointer">
+                  <Select value={robots} onValueChange={setRobots} disabled={true}>
+                    <SelectTrigger id="robots" className="h-9 text-xs cursor-not-allowed bg-muted/30">
                       <SelectValue placeholder="Mặc định: index, follow" />
                     </SelectTrigger>
                     <SelectContent className="text-xs">
@@ -301,8 +242,8 @@ export function ArticleSeoSection({
                     placeholder="Tiêu đề hiển thị khi share Facebook/Zalo..."
                     value={ogTitle}
                     onChange={(e) => setOgTitle(e.target.value)}
-                    disabled={disabled}
-                    className="h-9 text-xs"
+                    disabled={true}
+                    className="h-9 text-xs bg-muted/30 cursor-not-allowed"
                   />
                 </div>
 
@@ -315,8 +256,8 @@ export function ArticleSeoSection({
                     placeholder="Mô tả tóm tắt khi share Facebook/Zalo..."
                     value={ogDescription}
                     onChange={(e) => setOgDescription(e.target.value)}
-                    disabled={disabled}
-                    className="min-h-16 text-xs resize-none"
+                    disabled={true}
+                    className="min-h-16 text-xs resize-none bg-muted/30 cursor-not-allowed"
                   />
                 </div>
               </div>

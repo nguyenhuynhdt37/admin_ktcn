@@ -29,6 +29,13 @@ import { Button } from '@/shared/components/ui/button'
 import { Switch } from '@/shared/components/ui/switch'
 import { Badge } from '@/shared/components/ui/badge'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select'
+import {
   Table,
   TableHeader,
   TableRow,
@@ -61,6 +68,8 @@ export function LanguagesPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingLanguage, setPendingLanguage] = useState<Language | null>(null)
 
+
+
   // Cấu hình các cảm biến kéo thả dnd-kit
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -84,12 +93,16 @@ export function LanguagesPage() {
     queryFn: () => languageService.getLanguages(false), // Chỉ hiển thị các ngôn ngữ không bị xóa mềm
   })
 
+
+
   // Đồng bộ danh sách local khi dữ liệu từ query thay đổi
   useEffect(() => {
     if (languages) {
       setLocalLanguages(languages)
     }
   }, [languages])
+
+
 
   // Mutation: Thay đổi trạng thái hoạt động (Enable/Disable)
   const toggleStatusMutation = useMutation({
@@ -140,6 +153,8 @@ export function LanguagesPage() {
     },
   })
 
+
+
   // Xử lý sự kiện kéo thả kết thúc
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -184,11 +199,11 @@ export function LanguagesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary animate-pulse-slow" />
+            <Globe className="h-6 w-6 text-primary" />
             Cấu hình ngôn ngữ
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Sắp xếp thứ tự hiển thị bằng cách kéo thả và cấu hình ngôn ngữ mặc định cho hệ thống.
+            Sắp xếp thứ tự hiển thị bằng cách kéo thả và cấu hình ngôn ngữ mặc định hệ thống.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -200,6 +215,8 @@ export function LanguagesPage() {
           )}
         </div>
       </div>
+
+
 
       {isLoading ? (
         <div className="flex h-64 flex-col items-center justify-center gap-3">

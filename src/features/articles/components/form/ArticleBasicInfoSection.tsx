@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
-import { Loader2 } from 'lucide-react'
+import { Button } from '@/shared/components/ui/button'
+import { Languages, Loader2 } from 'lucide-react'
 
 interface ArticleBasicInfoSectionProps {
   title: string
@@ -14,6 +15,13 @@ interface ArticleBasicInfoSectionProps {
   disabled?: boolean
   isCheckingSlug?: boolean
   errors?: { title?: string }
+
+  // Props dịch nhanh
+  showTranslateActions?: boolean
+  onTranslateTitle?: () => void
+  isTranslatingTitle?: boolean
+  onTranslateExcerpt?: () => void
+  isTranslatingExcerpt?: boolean
 }
 
 export function ArticleBasicInfoSection({
@@ -26,6 +34,11 @@ export function ArticleBasicInfoSection({
   disabled = false,
   isCheckingSlug = false,
   errors,
+  showTranslateActions = false,
+  onTranslateTitle,
+  isTranslatingTitle = false,
+  onTranslateExcerpt,
+  isTranslatingExcerpt = false,
 }: ArticleBasicInfoSectionProps) {
   return (
     <Card className="bg-card text-card-foreground">
@@ -34,9 +47,24 @@ export function ArticleBasicInfoSection({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="title" className="text-xs font-semibold text-foreground flex items-center gap-1">
-            Tiêu đề bài viết <span className="text-destructive">*</span>
-          </Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="title" className="text-xs font-semibold text-foreground flex items-center gap-1">
+              Tiêu đề bài viết <span className="text-destructive">*</span>
+            </Label>
+            {showTranslateActions && onTranslateTitle && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onTranslateTitle}
+                disabled={isTranslatingTitle || disabled}
+                className="h-6 px-2 text-[10px] text-primary hover:bg-primary/5 cursor-pointer flex items-center gap-1 font-semibold border border-primary/20"
+              >
+                {isTranslatingTitle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                <span>Dịch từ Tiếng Việt</span>
+              </Button>
+            )}
+          </div>
           <Input
             id="title"
             placeholder="Nhập tiêu đề của bài viết..."
@@ -75,9 +103,24 @@ export function ArticleBasicInfoSection({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="excerpt" className="text-xs font-semibold text-foreground">
-            Tóm tắt ngắn (Excerpt)
-          </Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="excerpt" className="text-xs font-semibold text-foreground">
+              Tóm tắt ngắn (Excerpt)
+            </Label>
+            {showTranslateActions && onTranslateExcerpt && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onTranslateExcerpt}
+                disabled={isTranslatingExcerpt || disabled}
+                className="h-6 px-2 text-[10px] text-primary hover:bg-primary/5 cursor-pointer flex items-center gap-1 font-semibold border border-primary/20"
+              >
+                {isTranslatingExcerpt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                <span>Dịch từ Tiếng Việt</span>
+              </Button>
+            )}
+          </div>
           <Textarea
             id="excerpt"
             placeholder="Nhập đoạn giới thiệu/tóm tắt ngắn gọn của bài viết..."

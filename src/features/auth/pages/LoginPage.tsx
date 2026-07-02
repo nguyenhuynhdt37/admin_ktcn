@@ -10,7 +10,8 @@ import { Input } from '@/shared/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
 import { toast } from 'sonner'
-import { ShieldAlert } from 'lucide-react'
+import { ShieldAlert, User, Lock, Eye, EyeOff, GraduationCap } from 'lucide-react'
+import logoDhVinh from '@/assets/logo-dhvinh.png'
 
 const loginSchema = z.object({
   username: z.string().min(3, { message: 'Tên đăng nhập phải từ 3 ký tự' }),
@@ -24,6 +25,9 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // State ẩn/hiện mật khẩu
+  const [showPassword, setShowPassword] = useState(false)
+
   // Rate limit state
   const [retryAfter, setRetryAfter] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -33,8 +37,8 @@ export function LoginPage() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: 'admin',
-      password: 'adminpassword',
+      username: '',
+      password: '',
     },
   })
 
@@ -99,13 +103,22 @@ export function LoginPage() {
   }
 
   return (
-    <Card className="border shadow-md bg-card text-card-foreground">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold tracking-tight text-center">Đăng nhập Admin</CardTitle>
-        <CardDescription className="text-center text-muted-foreground">
-          Cổng thông tin quản trị Trường Kỹ thuật Công nghệ (KTCN)
-        </CardDescription>
+    <Card className="border border-border/40 shadow-2xl bg-card/85 dark:bg-card/75 backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:shadow-primary/5">
+      <CardHeader className="space-y-1 pb-4">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="flex mb-3">
+            <img src={logoDhVinh} alt="Đại học Vinh Logo" className="h-16 w-16 object-contain" />
+          </div>
+          <CardTitle className="text-xl font-bold tracking-tight text-foreground uppercase">
+            Đại học Vinh
+          </CardTitle>
+          <CardDescription className="text-xs font-semibold text-primary mt-1 tracking-wider uppercase">
+            TRƯỜNG KỸ THUẬT VÀ CÔNG NGHỆ
+          </CardDescription>
+          <div className="h-[2px] w-12 bg-primary/40 rounded-full mt-3" />
+        </div>
       </CardHeader>
+      
       <CardContent>
         {/* Rate limit warning */}
         {isLocked && (
@@ -128,45 +141,74 @@ export function LoginPage() {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tên đăng nhập</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-foreground/80">Tên đăng nhập</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nhập tài khoản (ví dụ: admin)..." disabled={isLocked} {...field} />
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/75" />
+                      <Input 
+                        placeholder="Nhập tài khoản..." 
+                        disabled={isLocked} 
+                        className="pl-9 bg-background/50 border-border/60 focus-visible:ring-primary"
+                        {...field} 
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-[11px]" />
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mật khẩu</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-foreground/80">Mật khẩu</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" disabled={isLocked} {...field} />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/75" />
+                      <Input 
+                        type={showPassword ? 'text' : 'password'} 
+                        placeholder="••••••••" 
+                        disabled={isLocked} 
+                        className="pl-9 pr-9 bg-background/50 border-border/60 focus-visible:ring-primary"
+                        {...field} 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLocked}
+                        className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center bg-transparent border-none outline-hidden"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-[11px]" />
                 </FormItem>
               )}
             />
+            
             <Button
               type="submit"
-              className="w-full mt-2 cursor-pointer"
+              className="w-full mt-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/95 font-bold transition-all shadow-md active:scale-[0.98] h-10"
               disabled={form.formState.isSubmitting || isLocked}
             >
               {isLocked
                 ? `Thử lại sau ${retryAfter}s`
                 : form.formState.isSubmitting
                   ? 'Đang xác thực...'
-                  : 'Đăng nhập'}
+                  : 'Đăng nhập cổng quản trị'}
             </Button>
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2 text-center text-xs text-muted-foreground border-t pt-4">
-        <p>Tài khoản mặc định của Trường: admin / adminpassword</p>
+      
+      <CardFooter className="flex flex-col gap-2 text-center text-[10px] text-muted-foreground/80 border-t border-border/40 pt-4 bg-muted/5 dark:bg-transparent">
+        <p>Hệ thống chỉ dành cho cán bộ quản lý và biên tập viên được ủy quyền.</p>
       </CardFooter>
     </Card>
   )
 }
+
 export default LoginPage

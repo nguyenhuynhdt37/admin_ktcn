@@ -36,8 +36,12 @@ import {
   GraduationCap,
   Image,
   Languages,
+  BrainCircuit,
+  Fingerprint,
 } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
+import logoDhVinh from '@/assets/logo-dhvinh.png'
 
 // Imports cho phím tắt và Command Palette
 import { useHotkeys } from '@/shared/hooks/useHotkeys'
@@ -76,6 +80,7 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
     return (
       <NavLink
         to={item.href!}
+        end
         onClick={onClose}
         className={({ isActive }) =>
           cn(
@@ -151,6 +156,9 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
     { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
+
+    { label: 'AI Management Hub', href: '/languages/ai-hub', icon: BrainCircuit, permission: null },
+    { label: 'Cấu hình Embedding', href: '/languages/embedding', icon: Fingerprint, permission: null },
     { type: 'separator' },
     { label: 'Thành viên', href: '/users', icon: Users, permission: null },
     {
@@ -170,14 +178,17 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
 
   return (
     <div className="flex h-full flex-col border-r bg-card text-card-foreground">
-      <div className="flex h-16 items-center border-b px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="font-bold text-lg">A</span>
+      <div className="flex h-16 items-center border-b px-4">
+        <Link to="/" className="flex items-center gap-2.5 font-semibold">
+          <img src={logoDhVinh} alt="Đại học Vinh Logo" className="h-9 w-9 object-contain" />
+          <div className="flex flex-col text-left">
+            <span className="text-[13px] font-bold tracking-tight text-foreground leading-tight">
+              ĐẠI HỌC VINH
+            </span>
+            <span className="text-[9px] text-muted-foreground font-mono mt-0.5 leading-none">
+              CMS Portal
+            </span>
           </div>
-          <span className="text-xl tracking-tight">
-            Antigravity <span className="text-xs text-muted-foreground font-mono">v1</span>
-          </span>
         </Link>
       </div>
 
