@@ -134,7 +134,7 @@ export const articleService = {
   uploadMedia: async (file: File): Promise<{ id?: string; object_key: string }> => {
     const formData = new FormData()
     formData.append('file', file)
-    const { data } = await httpClient.post<{ id?: string; object_key: string }>('/media/upload', formData, {
+    const { data } = await httpClient.post<{ id?: string; object_key: string }>('/admin/media/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

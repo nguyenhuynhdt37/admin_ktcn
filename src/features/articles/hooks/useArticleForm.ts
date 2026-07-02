@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import dayjs from 'dayjs'
+import { useAuthStore } from '@/stores/authStore'
 import { articleService } from '../services/articleService'
 import { SEO_CONFIG } from '../constants'
 import { generateSeoTitle, generateSeoDescription } from '@/shared/utils/seo'
@@ -30,6 +31,7 @@ interface UseArticleFormProps {
 export function useArticleForm({ articleId, showDraftsFeature = true }: UseArticleFormProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
 
   // State quản lý ID bài viết hiện tại (có thể là bài mới đang lưu nháp)
   const [currentArticleId, setCurrentArticleId] = useState<string | null>(articleId || null)
@@ -129,6 +131,14 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   // Sync state with article detail in Edit Mode
   useEffect(() => {
     if (isEditMode && articleDetail) {
+      // Bảo mật phía Frontend: Chặn chỉnh sửa nếu user hiện tại không phải tác giả của bài viết
+      const authorId = articleDetail.author_id || articleDetail.author?.id
+      if (user && authorId && authorId !== user.id) {
+        toast.error('Bạn không có quyền chỉnh sửa bài viết của tác giả khác.')
+        navigate('/articles')
+        return
+      }
+
       // Tiếng Việt
       const vi = articleDetail.translations?.vi || {}
       setViTitle(vi.title || '')

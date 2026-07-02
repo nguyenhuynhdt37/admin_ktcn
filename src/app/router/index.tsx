@@ -26,6 +26,7 @@ import TeacherCreatePage from '@/features/teachers/pages/TeacherCreatePage'
 import TeacherEditPage from '@/features/teachers/pages/TeacherEditPage'
 import TeacherDetailPage from '@/features/teachers/pages/TeacherDetailPage'
 
+import { TagsPage } from '@/features/tags/pages/TagsPage'
 import { ArticlesPage } from '@/features/articles/pages/ArticlesPage'
 import ArticleFormPage from '@/features/articles/pages/ArticleFormPage'
 import ArticleEditPage from '@/features/articles/pages/ArticleEditPage'
@@ -90,6 +91,10 @@ export const router = createBrowserRouter([
       {
         path: 'departments',
         element: <DepartmentsPage />,
+      },
+      {
+        path: 'tags',
+        element: <TagsPage />,
       },
       {
         path: 'banners',

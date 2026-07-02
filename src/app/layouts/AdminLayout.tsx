@@ -38,6 +38,7 @@ import {
   Languages,
   BrainCircuit,
   Fingerprint,
+  Tag,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -116,7 +117,7 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
       </button>
       
       {isOpen && (
-        <div className="pl-5 ml-5 mt-1 border-l border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
+        <div className="mt-1 ml-4 pl-3 border-l-2 border-border/60 space-y-0.5">
           {item.children.map((child) => (
             <NavLink
               key={child.href}
@@ -124,15 +125,18 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
               onClick={onClose}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
+                  'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-all hover:bg-accent hover:text-accent-foreground',
                   isActive
-                    ? 'bg-accent text-accent-foreground font-semibold shadow-2xs'
-                    : 'text-muted-foreground'
+                    ? 'bg-primary/8 text-primary hover:bg-primary/10 hover:text-primary font-semibold'
+                    : 'text-muted-foreground/80 hover:text-foreground'
                 )
               }
             >
-              {child.icon ? <child.icon className="h-4 w-4 shrink-0" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />}
-              {child.label}
+              {child.icon
+                ? <child.icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                : <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-40" />
+              }
+              <span className="truncate">{child.label}</span>
             </NavLink>
           ))}
         </div>
@@ -153,6 +157,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { type: 'separator' },
     { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' },
     { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
+    { label: 'Thẻ (Tag)', href: '/tags', icon: Tag, permission: null },
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
     { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },

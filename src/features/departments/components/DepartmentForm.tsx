@@ -224,7 +224,7 @@ export function DepartmentForm({
     formData.append('file', file)
 
     try {
-      const { data } = await httpClient.post<{ object_key: string }>('/media/upload', formData, {
+      const { data } = await httpClient.post<{ object_key: string }>('/admin/media/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       

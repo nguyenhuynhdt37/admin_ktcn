@@ -291,7 +291,7 @@ export function useCategoryForm({
     const fetchThumbnailUrl = async () => {
       if (form.thumbnail_id) {
         try {
-          const res = await httpClient.get<{ url: string }>(`/media/${form.thumbnail_id}/url`)
+          const res = await httpClient.get<{ url: string }>(`/admin/media/${form.thumbnail_id}/url`)
           setThumbnailUrl(res.data.url)
         } catch {
           setThumbnailUrl(null)
@@ -312,10 +312,10 @@ export function useCategoryForm({
     formData.append('file', file)
 
     try {
-      const { data } = await httpClient.post<{ id: string; name: string }>('/media/upload', formData, {
+      const { data } = await httpClient.post<{ id: string; name: string }>('/admin/media/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      const urlRes = await httpClient.get<{ url: string }>(`/media/${data.id}/url`)
+      const urlRes = await httpClient.get<{ url: string }>(`/admin/media/${data.id}/url`)
       setForm((prev) => ({ ...prev, thumbnail_id: data.id }))
       setThumbnailUrl(urlRes.data.url)
       toast.success('Đã tải lên ảnh đại diện danh mục!')

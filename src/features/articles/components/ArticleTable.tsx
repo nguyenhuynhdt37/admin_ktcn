@@ -229,12 +229,21 @@ export function ArticleTable({
                             <TooltipContent>Bài viết nổi bật</TooltipContent>
                           </Tooltip>
                         )}
-                        <Link
-                          to={`/articles/${article.id}/edit`}
-                          className="font-medium text-sm text-foreground hover:text-primary transition-colors hover:underline truncate block"
-                        >
-                          {title}
-                        </Link>
+                        {isAuthor ? (
+                          <Link
+                            to={`/articles/${article.id}/edit`}
+                            className="font-medium text-sm text-foreground hover:text-primary transition-colors hover:underline truncate block"
+                          >
+                            {title}
+                          </Link>
+                        ) : (
+                          <Link
+                            to={`/articles/${article.id}/preview`}
+                            className="font-medium text-sm text-foreground hover:text-primary transition-colors hover:underline truncate block"
+                          >
+                            {title}
+                          </Link>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
