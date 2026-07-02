@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { X, Save, Link as LinkIcon, Eye, EyeOff, Smile, Loader2, Check, ChevronsUpDown, Search, AlertTriangle } from 'lucide-react'
+import { X, Save, Link as LinkIcon, Eye, EyeOff, Smile, Loader2, Check, ChevronsUpDown, Search, AlertTriangle, Languages } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -30,6 +30,7 @@ import type { MenuItemPayload } from '../types'
 import { useAuth } from '@/app/providers/AuthProvider'
 
 import { useMenuItemConfig } from '../hooks/useMenuItemConfig'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 // Helper chuyển đổi tên icon sang PascalCase để khớp thư viện Lucide
 function toPascalCase(str: string): string {
@@ -150,6 +151,17 @@ function MenuItemConfigForm({
     refetchTree,
   })
 
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const handleTranslateClick = () => {
+    const enTitle = form.translations.en.title.trim()
+    if (enTitle && enTitle !== 'Đang dịch...' && enTitle !== 'Translating...') {
+      setShowConfirm(true)
+    } else {
+      handleAutoTranslate()
+    }
+  }
+
   return (
     <div className="flex h-full flex-col bg-card rounded-xl border border-border shadow-xs">
       {/* Header Panel */}
@@ -188,19 +200,22 @@ function MenuItemConfigForm({
             <span className="text-[11px] font-bold uppercase text-muted-foreground tracking-wider">
               Nội dung đa ngôn ngữ
             </span>
-            {activeTab === 'en' && (
+            {activeTab === 'vi' && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={handleAutoTranslate}
+                onClick={handleTranslateClick}
                 disabled={isTranslating}
                 className="h-7 text-[10px] px-2 text-primary hover:bg-primary/10 cursor-pointer flex items-center gap-1 font-semibold"
               >
                 {isTranslating ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <span>Translate 🇻🇳 ➔ 🇬🇧</span>
+                  <>
+                    <Languages className="h-3.5 w-3.5" />
+                    <span>Dịch sang Tiếng Anh</span>
+                  </>
                 )}
               </Button>
             )}
@@ -413,6 +428,16 @@ function MenuItemConfigForm({
           </Button>
         )}
       </div>
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        title="Xác nhận ghi đè bản dịch"
+        description="Tiêu đề hiển thị Tiếng Anh hiện tại đã có dữ liệu. Bạn có chắc chắn muốn dịch lại và ghi đè bản dịch cũ không?"
+        onConfirm={() => {
+          handleAutoTranslate()
+          setShowConfirm(false)
+        }}
+      />
     </div>
   )
 }

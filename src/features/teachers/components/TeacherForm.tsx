@@ -33,6 +33,7 @@ import { departmentService } from '@/features/departments/services/departmentSer
 import { positionService } from '@/features/positions/services/positionService'
 import { getMediaUrl } from '@/features/articles/utils/media'
 import { httpClient } from '@/services/http/client'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { cn } from '@/lib/utils'
 
 // 1. Zod Schema
@@ -378,7 +379,8 @@ function TeacherFormInner({
     try {
       const res = await httpClient.post<Record<string, string>>('/translation', {
         text: fullName,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'english_name'
       }, { timeout: 60000 })
       if (res.data?.en) {
         form.setValue('english_name', res.data.en)
@@ -404,7 +406,8 @@ function TeacherFormInner({
     try {
       const res = await httpClient.post<Record<string, string>>('/translation', {
         text: interestsVi,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'research_direction'
       }, { timeout: 60000 })
       if (res.data?.en) {
         form.setValue('translations.en.research_interests', res.data.en)
@@ -430,7 +433,8 @@ function TeacherFormInner({
     try {
       const res = await httpClient.post<Record<string, string>>('/translation/html', {
         html: biographyVi,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'scientific_profile'
       }, { timeout: 60000 })
       if (res.data?.en) {
         form.setValue('translations.en.biography', res.data.en)
@@ -441,6 +445,40 @@ function TeacherFormInner({
       toast.error('Có lỗi xảy ra khi dịch lý lịch khoa học.')
     } finally {
       setIsTranslatingBiography(false)
+    }
+  }
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
+
+  const onTranslateEnglishNameClick = () => {
+    const enName = form.getValues('english_name')?.trim()
+    if (enName) {
+      setConfirmAction(() => handleTranslateEnglishName)
+      setConfirmOpen(true)
+    } else {
+      handleTranslateEnglishName()
+    }
+  }
+
+  const onTranslateResearchInterestsClick = () => {
+    const enInterests = form.getValues('translations.en.research_interests')?.trim()
+    if (enInterests) {
+      setConfirmAction(() => handleTranslateResearchInterests)
+      setConfirmOpen(true)
+    } else {
+      handleTranslateResearchInterests()
+    }
+  }
+
+  const onTranslateBiographyClick = () => {
+    const enBiography = form.getValues('translations.en.biography')?.trim()
+    const cleanEnBiography = enBiography?.replace(/<[^>]*>/g, '').trim()
+    if (cleanEnBiography) {
+      setConfirmAction(() => handleTranslateBiography)
+      setConfirmOpen(true)
+    } else {
+      handleTranslateBiography()
     }
   }
 
@@ -576,7 +614,7 @@ function TeacherFormInner({
                             type="button"
                             variant="ghost"
                             className="h-6 text-[10px] text-primary hover:bg-primary/5 px-1.5 flex items-center gap-1 cursor-pointer"
-                            onClick={handleTranslateEnglishName}
+                            onClick={onTranslateEnglishNameClick}
                             disabled={isTranslatingName}
                           >
                             {isTranslatingName ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
@@ -752,7 +790,7 @@ function TeacherFormInner({
                             type="button"
                             variant="ghost"
                             className="h-6 text-[10px] text-primary hover:bg-primary/5 px-1.5 flex items-center gap-1 cursor-pointer"
-                            onClick={handleTranslateResearchInterests}
+                            onClick={onTranslateResearchInterestsClick}
                             disabled={isTranslatingInterests}
                           >
                             {isTranslatingInterests ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
@@ -780,7 +818,7 @@ function TeacherFormInner({
                         type="button"
                         variant="ghost"
                         className="h-6 text-[10px] text-primary hover:bg-primary/5 px-1.5 flex items-center gap-1 cursor-pointer"
-                        onClick={handleTranslateBiography}
+                        onClick={onTranslateBiographyClick}
                         disabled={isTranslatingBiography}
                       >
                         {isTranslatingBiography ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
@@ -1053,6 +1091,16 @@ function TeacherFormInner({
 
         </form>
       </Form>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Xác nhận ghi đè bản dịch"
+        description="Thông tin Tiếng Anh hiện tại đã có dữ liệu. Bạn có chắc chắn muốn dịch lại và ghi đè bản dịch cũ không?"
+        onConfirm={() => {
+          confirmAction?.()
+          setConfirmOpen(false)
+        }}
+      />
     </div>
   )
 }

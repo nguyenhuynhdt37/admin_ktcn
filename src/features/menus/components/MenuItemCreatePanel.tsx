@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { X, Save, Link as LinkIcon, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { X, Save, Link as LinkIcon, Eye, EyeOff, Loader2, Languages } from 'lucide-react'
 import { httpClient } from '@/services/http/client'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -23,6 +23,7 @@ import { CategoryTreeSelect } from './CategoryTreeSelect'
 import { ArticleSelect, DepartmentSelect } from './MenuItemConfigPanel'
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import { useAuth } from '@/app/providers/AuthProvider'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 interface MenuItemCreatePanelProps {
   menuId: string
@@ -58,43 +59,17 @@ export function MenuItemCreatePanel({
   const [externalUrl, setExternalUrl] = useState('')
   const [openInNewTab, setOpenInNewTab] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
+  const [showConfirm, setShowConfirm] = useState(false)
 
-  // Tự động dịch sau 1s ngưng gõ
-  const debouncedViTitle = useDebounce(translations.vi.title, 1000)
-
-  useEffect(() => {
-    const autoTranslate = async () => {
-      const viTitle = debouncedViTitle.trim()
-      if (!viTitle || viTitle === lastTranslatedVi) return
-
-      setIsTranslating(true)
-      try {
-        const res = await httpClient.post<Record<string, string>>('/translation', {
-          text: viTitle,
-          target_languages: ['en']
-        })
-        if (res.data?.en) {
-          setTranslations((prev) => {
-            const currentEn = prev.en.title.trim()
-            if (!currentEn || currentEn === 'Đang dịch...' || currentEn === 'Translating...') {
-              return {
-                ...prev,
-                en: { title: res.data.en }
-              }
-            }
-            return prev
-          })
-          setLastTranslatedVi(viTitle)
-        }
-      } catch (err) {
-        console.error('Lỗi tự động dịch tạo mới:', err)
-      } finally {
-        setIsTranslating(false)
-      }
+  const handleTranslateClick = () => {
+    const enTitle = translations.en.title.trim()
+    if (enTitle && enTitle !== 'Đang dịch...' && enTitle !== 'Translating...') {
+      setShowConfirm(true)
+    } else {
+      handleAutoTranslate()
     }
+  }
 
-    autoTranslate()
-  }, [debouncedViTitle, lastTranslatedVi])
 
   // State tìm bài viết
   const [articleSearch, setArticleSearch] = useState('')
@@ -146,7 +121,8 @@ export function MenuItemCreatePanel({
     try {
       const res = await httpClient.post<Record<string, string>>('/translation', {
         text: textToTranslate,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'menu_name'
       }, {
         timeout: 60000
       })
@@ -254,19 +230,22 @@ export function MenuItemCreatePanel({
             <span className="text-[11px] font-bold uppercase text-muted-foreground tracking-wider">
               Nội dung đa ngôn ngữ
             </span>
-            {activeTab === 'en' && (
+            {activeTab === 'vi' && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={handleAutoTranslate}
+                onClick={handleTranslateClick}
                 disabled={isTranslating}
                 className="h-7 text-[10px] px-2 text-primary hover:bg-primary/10 cursor-pointer flex items-center gap-1 font-semibold"
               >
                 {isTranslating ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <span>Translate 🇻🇳 ➔ 🇬🇧</span>
+                  <>
+                    <Languages className="h-3.5 w-3.5" />
+                    <span>Dịch sang Tiếng Anh</span>
+                  </>
                 )}
               </Button>
             )}
@@ -475,6 +454,16 @@ export function MenuItemCreatePanel({
           {createMutation.isPending ? 'Đang tạo...' : 'Tạo mục menu'}
         </Button>
       </div>
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        title="Xác nhận ghi đè bản dịch"
+        description="Tiêu đề hiển thị Tiếng Anh hiện tại đã có dữ liệu. Bạn có chắc chắn muốn dịch lại và ghi đè bản dịch cũ không?"
+        onConfirm={() => {
+          handleAutoTranslate()
+          setShowConfirm(false)
+        }}
+      />
     </div>
   )
 }

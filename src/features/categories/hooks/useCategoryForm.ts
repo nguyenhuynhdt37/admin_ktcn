@@ -227,7 +227,8 @@ export function useCategoryForm({
       // 1. Dịch Tên (Tăng timeout lên 60s tránh phản hồi chậm của AI dịch thuật)
       const nameRes = await httpClient.post<Record<string, string>>('/translation', {
         text: textToTranslate,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'category_name'
       }, {
         timeout: 60000
       })
@@ -238,7 +239,8 @@ export function useCategoryForm({
       if (descToTranslate) {
         const descRes = await httpClient.post<Record<string, string>>('/translation', {
           text: descToTranslate,
-          target_languages: ['en']
+          target_languages: ['en'],
+          context: 'short_description'
         }, {
           timeout: 60000
         })

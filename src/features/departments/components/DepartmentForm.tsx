@@ -30,6 +30,7 @@ import { httpClient } from '@/services/http/client'
 import { toast } from 'sonner'
 import { getMediaUrl } from '@/features/articles/utils/media'
 import type { Department } from '../types'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 const translationSchema = z.object({
   name: z.string()
@@ -196,7 +197,8 @@ export function DepartmentForm({
       try {
         const res = await httpClient.post<Record<string, string>>('/translation', {
           text: trimmedVi,
-          target_languages: ['en']
+          target_languages: ['en'],
+          context: 'department_name'
         })
         if (res.data?.en) {
           form.setValue('translations.en.name', res.data.en)
@@ -257,7 +259,8 @@ export function DepartmentForm({
       // Dịch tên bộ môn
       const nameRes = await httpClient.post<Record<string, string>>('/translation', {
         text: nameToTranslate,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'department_name'
       })
       if (nameRes.data?.en) {
         form.setValue('translations.en.name', nameRes.data.en)
@@ -267,7 +270,8 @@ export function DepartmentForm({
       if (descToTranslate) {
         const descRes = await httpClient.post<Record<string, string>>('/translation', {
           text: descToTranslate,
-          target_languages: ['en']
+          target_languages: ['en'],
+          context: 'department_description'
         })
         if (descRes.data?.en) {
           form.setValue('translations.en.description', descRes.data.en)
@@ -281,6 +285,18 @@ export function DepartmentForm({
       toast.error('Có lỗi xảy ra khi dịch tự động.')
     } finally {
       setIsTranslating(false)
+    }
+  }
+
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const handleTranslateClick = () => {
+    const enName = form.getValues('translations.en.name')?.trim()
+    const enDesc = form.getValues('translations.en.description')?.trim()
+    if (enName || enDesc) {
+      setShowConfirm(true)
+    } else {
+      handleAutoTranslate()
     }
   }
 
@@ -412,7 +428,7 @@ export function DepartmentForm({
                       variant="outline"
                       size="sm"
                       className="h-6 border-primary/30 text-[10px] px-2 text-primary hover:bg-primary/5 cursor-pointer flex items-center gap-1"
-                      onClick={handleAutoTranslate}
+                      onClick={handleTranslateClick}
                       disabled={isTranslating || !form.watch('translations.vi.name')?.trim()}
                     >
                       <Languages className="h-3.5 w-3.5" /> Dịch tự động
@@ -654,6 +670,16 @@ export function DepartmentForm({
           </form>
         </Form>
       </CardContent>
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        title="Xác nhận ghi đè bản dịch"
+        description="Thông tin Tiếng Anh (Tên/Mô tả) hiện tại đã có dữ liệu. Bạn có chắc chắn muốn dịch lại và ghi đè bản dịch cũ không?"
+        onConfirm={() => {
+          handleAutoTranslate()
+          setShowConfirm(false)
+        }}
+      />
     </Card>
   )
 }

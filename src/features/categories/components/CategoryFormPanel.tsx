@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { CategorySEOSection } from './CategorySEOSection'
 import { useAuth } from '@/app/providers/AuthProvider'
 import { useCategoryForm, INITIAL_TRANSLATION } from '../hooks/useCategoryForm'
+import { useState } from 'react'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 interface CategoryFormPanelProps {
   mode: 'create' | 'edit'
@@ -61,6 +63,18 @@ export function CategoryFormPanel({
     refetchTree,
     onSelectCreatedItem,
   })
+
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const handleTranslateClick = () => {
+    const enName = form.translations?.en?.name?.trim()
+    const enDesc = form.translations?.en?.description?.trim()
+    if (enName || enDesc) {
+      setShowConfirm(true)
+    } else {
+      handleAutoTranslate()
+    }
+  }
 
   if (mode === 'edit' && isLoadingDetail) {
     return (
@@ -140,7 +154,7 @@ export function CategoryFormPanel({
                 variant="outline"
                 size="sm"
                 className="h-7 border-primary/40 text-[10px] px-2.5 text-primary hover:bg-primary/5 cursor-pointer shrink-0"
-                onClick={handleAutoTranslate}
+                onClick={handleTranslateClick}
                 disabled={isTranslating || !form.translations?.vi?.name?.trim()}
               >
                 <Languages className="h-3 w-3 mr-1" /> Dịch tự động
@@ -379,6 +393,16 @@ export function CategoryFormPanel({
           Lưu cấu hình
         </Button>
       </div>
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        title="Xác nhận ghi đè bản dịch"
+        description="Thông tin Tiếng Anh (Tên/Mô tả) hiện tại đã có dữ liệu. Bạn có chắc chắn muốn dịch lại và ghi đè bản dịch cũ không?"
+        onConfirm={() => {
+          handleAutoTranslate()
+          setShowConfirm(false)
+        }}
+      />
     </div>
   )
 }

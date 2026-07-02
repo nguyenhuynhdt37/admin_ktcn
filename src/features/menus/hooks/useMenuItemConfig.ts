@@ -119,44 +119,6 @@ export function useMenuItemConfig({
     }
   }, [item, setLastTranslatedVi])
 
-  // Tự động dịch sau 1s ngưng gõ
-  const debouncedViTitle = useDebounce(form.translations.vi.title, 1000)
-
-  useEffect(() => {
-    const autoTranslate = async () => {
-      const viTitle = debouncedViTitle.trim()
-      const hasEnTitle = form.translations.en.title.trim().length > 0
-      if (!viTitle) return
-      if (viTitle === lastTranslatedVi && hasEnTitle) return
-
-      setIsTranslating(true)
-      try {
-        const res = await httpClient.post<Record<string, string>>('/translation', {
-          text: viTitle,
-          target_languages: ['en']
-        })
-        if (res.data?.en) {
-          setForm((prev) => {
-            // Chỉ điền tự động nếu ô Tiếng Anh trống hoặc đang khớp với giá trị dịch cũ
-            const currentEn = prev.translations.en.title.trim()
-            if (!currentEn || currentEn === 'Đang dịch...' || currentEn === 'Translating...') {
-              const nextTrans = { ...prev.translations }
-              nextTrans.en = { title: res.data.en }
-              return { ...prev, translations: nextTrans }
-            }
-            return prev
-          })
-          setLastTranslatedVi(viTitle)
-        }
-      } catch (err) {
-        console.error('Lỗi tự động dịch:', err)
-      } finally {
-        setIsTranslating(false)
-      }
-    }
-
-    autoTranslate()
-  }, [debouncedViTitle, lastTranslatedVi, setLastTranslatedVi])
 
   const targetType = form.target_type || 'NONE'
   const targetId = form.target_id || ''
@@ -277,7 +239,8 @@ export function useMenuItemConfig({
     try {
       const res = await httpClient.post<Record<string, string>>('/translation', {
         text: textToTranslate,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'menu_name'
       }, {
         timeout: 60000
       })

@@ -356,7 +356,8 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     try {
       const res = await httpClient.post<Record<string, string>>('/translation', {
         text: viTitle,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'article_title'
       }, { timeout: 60000 })
       if (res.data?.en) {
         setEnTitle(res.data.en)
@@ -383,7 +384,8 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     try {
       const res = await httpClient.post<Record<string, string>>('/translation', {
         text: viExcerpt,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'article_summary'
       }, { timeout: 60000 })
       if (res.data?.en) {
         setEnExcerpt(res.data.en)
@@ -411,7 +413,8 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     try {
       const res = await httpClient.post<Record<string, string>>('/translation/html', {
         html: viContent,
-        target_languages: ['en']
+        target_languages: ['en'],
+        context: 'article_content'
       }, { timeout: 60000 })
       if (res.data?.en) {
         setEnContent(res.data.en)

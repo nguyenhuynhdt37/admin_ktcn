@@ -2,6 +2,8 @@ import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Loader2, ArrowLeft, Eye, FileText, Languages } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 import { ArticleBasicInfoSection } from './form/ArticleBasicInfoSection'
 import { ArticleEditorSection } from './form/ArticleEditorSection'
@@ -120,6 +122,37 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
     handleSubmit,
     isFormDisabled,
   } = useArticleForm({ articleId, showDraftsFeature })
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
+
+  const onTranslateTitleClick = () => {
+    if (enTitle.trim()) {
+      setConfirmAction(() => handleTranslateTitle)
+      setConfirmOpen(true)
+    } else {
+      handleTranslateTitle()
+    }
+  }
+
+  const onTranslateExcerptClick = () => {
+    if (enExcerpt.trim()) {
+      setConfirmAction(() => handleTranslateExcerpt)
+      setConfirmOpen(true)
+    } else {
+      handleTranslateExcerpt()
+    }
+  }
+
+  const onTranslateContentClick = () => {
+    const cleanEnContent = enContent.replace(/<[^>]*>/g, '').trim()
+    if (cleanEnContent) {
+      setConfirmAction(() => handleTranslateContent)
+      setConfirmOpen(true)
+    } else {
+      handleTranslateContent()
+    }
+  }
 
   return (
     <div className="space-y-6 text-left">
@@ -284,9 +317,9 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               isCheckingSlug={isCheckingEnSlug}
               errors={errors.en}
               showTranslateActions={true}
-              onTranslateTitle={handleTranslateTitle}
+              onTranslateTitle={onTranslateTitleClick}
               isTranslatingTitle={isTranslatingTitle}
-              onTranslateExcerpt={handleTranslateExcerpt}
+              onTranslateExcerpt={onTranslateExcerptClick}
               isTranslatingExcerpt={isTranslatingExcerpt}
             />
 
@@ -296,7 +329,7 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               disabled={isFormDisabled}
               errors={errors.en}
               showTranslateActions={true}
-              onTranslateContent={handleTranslateContent}
+              onTranslateContent={onTranslateContentClick}
               isTranslatingContent={isTranslatingContent}
             />
 
@@ -419,6 +452,16 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
           onSelectDraft={handleSelectDraft}
         />
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Xác nhận ghi đè bản dịch"
+        description="Thông tin Tiếng Anh hiện tại đã có dữ liệu. Bạn có chắc chắn muốn dịch lại và ghi đè bản dịch cũ không?"
+        onConfirm={() => {
+          confirmAction?.()
+          setConfirmOpen(false)
+        }}
+      />
     </div>
   )
 }
