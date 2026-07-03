@@ -99,7 +99,8 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
   }
 
   return (
-    <div className="space-y-1">
+    <div>
+      {/* Parent toggle button */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground text-muted-foreground cursor-pointer bg-transparent border-none outline-hidden"
@@ -110,35 +111,47 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
         </div>
         <ChevronDown
           className={cn(
-            "h-4 w-4 transition-transform duration-200",
-            isOpen ? "transform rotate-180" : ""
+            "h-3.5 w-3.5 transition-transform duration-200 opacity-60",
+            isOpen ? "rotate-180" : ""
           )}
         />
       </button>
-      
+
+      {/* Sub-items */}
       {isOpen && (
-        <div className="mt-1 ml-4 pl-3 border-l-2 border-border/60 space-y-0.5">
-          {item.children.map((child) => (
-            <NavLink
-              key={child.href}
-              to={child.href}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-all hover:bg-accent hover:text-accent-foreground',
-                  isActive
-                    ? 'bg-primary/8 text-primary hover:bg-primary/10 hover:text-primary font-semibold'
-                    : 'text-muted-foreground/80 hover:text-foreground'
-                )
-              }
-            >
-              {child.icon
-                ? <child.icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                : <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-40" />
-              }
-              <span className="truncate">{child.label}</span>
-            </NavLink>
-          ))}
+        <div className="mt-0.5 mx-2 mb-1">
+          <div className="relative pl-3 border-l border-border/50">
+            {item.children.map((child) => (
+              <NavLink
+                key={child.href}
+                to={child.href}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    'group relative flex items-center gap-2 rounded-md py-1.5 px-2.5 text-[13px] transition-all duration-150',
+                    isActive
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground font-medium hover:bg-accent hover:text-accent-foreground'
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* Active dot indicator */}
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full transition-all duration-150',
+                        isActive
+                          ? 'w-1.5 h-1.5 bg-primary'
+                          : 'w-1 h-1 bg-muted-foreground/30 group-hover:bg-muted-foreground/60'
+                      )}
+                    />
+                    <span className="truncate">{child.label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
         </div>
       )}
     </div>
