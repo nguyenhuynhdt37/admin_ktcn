@@ -11,7 +11,9 @@ import { ArticleSeoSection } from './form/ArticleSeoSection'
 import { ArticlePublishSection } from './form/ArticlePublishSection'
 import { ArticleMediaSection } from './form/ArticleMediaSection'
 import { MyDraftsModal } from './form/MyDraftsModal'
+import { AiGenerateModal } from './form/AiGenerateModal'
 import { useArticleForm } from '../hooks/useArticleForm'
+import { Sparkles } from 'lucide-react'
 
 interface ArticleFormProps {
   articleId?: string | null
@@ -99,6 +101,11 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
     isPinned,
     setIsPinned,
 
+    viFocusKeyword,
+    setViFocusKeyword,
+    enFocusKeyword,
+    setEnFocusKeyword,
+
     isDraftsModalOpen,
     setIsDraftsModalOpen,
     draftCount,
@@ -125,6 +132,32 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null)
+  const [isAiGenerateOpen, setIsAiGenerateOpen] = useState(false)
+
+  const handleAiGenerateSuccess = (data: any, targetLang: 'vi' | 'en') => {
+    if (targetLang === 'vi') {
+      setViTitle(data.title)
+      setViExcerpt(data.excerpt)
+      setViContent(data.content)
+      setViSeoTitle(data.seo_title)
+      setViSeoDescription(data.seo_description)
+      setViSlug(data.slug)
+      setIsViSeoTitleOverridden(true)
+      setIsViSeoDescriptionOverridden(true)
+      if (data.focus_keyword) setViFocusKeyword(data.focus_keyword)
+    } else {
+      setEnTitle(data.title)
+      setEnExcerpt(data.excerpt)
+      setEnContent(data.content)
+      setEnSeoTitle(data.seo_title)
+      setEnSeoDescription(data.seo_description)
+      setEnSlug(data.slug)
+      setIsEnSeoTitleOverridden(true)
+      setIsEnSeoDescriptionOverridden(true)
+      if (data.focus_keyword) setEnFocusKeyword(data.focus_keyword)
+    }
+    setActiveTab(targetLang)
+  }
 
   const onTranslateTitleClick = () => {
     if (enTitle.trim()) {
@@ -205,20 +238,32 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
           )}
 
           {showDraftsFeature && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsDraftsModalOpen(true)}
-              className="gap-2 text-xs font-semibold hover:bg-muted cursor-pointer"
-            >
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span>Bản nháp của tôi</span>
-              {draftCount > 0 && (
-                <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary border-primary/20">
-                  {draftCount}
-                </Badge>
-              )}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAiGenerateOpen(true)}
+                className="gap-2 text-xs font-semibold hover:bg-muted cursor-pointer border-purple-500/30 text-purple-600 dark:text-purple-400 hover:text-purple-700 hover:bg-purple-500/5"
+              >
+                <Sparkles className="h-4 w-4 animate-pulse" />
+                <span>Soạn bài bằng AI</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDraftsModalOpen(true)}
+                className="gap-2 text-xs font-semibold hover:bg-muted cursor-pointer"
+              >
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span>Bản nháp của tôi</span>
+                {draftCount > 0 && (
+                  <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary border-primary/20">
+                    {draftCount}
+                  </Badge>
+                )}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -231,8 +276,8 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
           {/* Language Switcher */}
           <div className="flex border bg-muted/20 rounded-lg p-1 gap-1">
             {[
-              { code: 'vi' as const, label: 'Tiếng Việt', flag: '🇻🇳' },
-              { code: 'en' as const, label: 'Tiếng Anh', flag: '🇬🇧' },
+              { code: 'vi' as const, label: 'Tiếng Việt' },
+              { code: 'en' as const, label: 'Tiếng Anh' },
             ].map((tab) => (
               <button
                 key={tab.code}
@@ -245,7 +290,6 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                 )}
               >
-                <span>{tab.flag}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -263,6 +307,9 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               disabled={isFormDisabled}
               isCheckingSlug={isCheckingViSlug}
               errors={errors.vi}
+              articleId={currentArticleId}
+              content={viContent}
+              lang="vi"
             />
 
             <ArticleEditorSection
@@ -270,9 +317,13 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               setContent={setViContent}
               disabled={isFormDisabled}
               errors={errors.vi}
+              articleId={currentArticleId}
+              focusKeyword={viFocusKeyword}
+              lang="vi"
             />
 
             <ArticleSeoSection
+              articleId={currentArticleId}
               title={viTitle}
               slug={viSlug}
               content={viContent}
@@ -301,6 +352,10 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               setIsSeoTitleOverridden={setIsViSeoTitleOverridden}
               isSeoDescriptionOverridden={isViSeoDescriptionOverridden}
               setIsSeoDescriptionOverridden={setIsViSeoDescriptionOverridden}
+              focusKeyword={viFocusKeyword}
+              setFocusKeyword={setViFocusKeyword}
+              lang="vi"
+              thumbnailKey={thumbnailKey}
             />
           </div>
 
@@ -321,6 +376,9 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               isTranslatingTitle={isTranslatingTitle}
               onTranslateExcerpt={onTranslateExcerptClick}
               isTranslatingExcerpt={isTranslatingExcerpt}
+              articleId={currentArticleId}
+              content={enContent}
+              lang="en"
             />
 
             <ArticleEditorSection
@@ -331,9 +389,13 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               showTranslateActions={true}
               onTranslateContent={onTranslateContentClick}
               isTranslatingContent={isTranslatingContent}
+              articleId={currentArticleId}
+              focusKeyword={enFocusKeyword}
+              lang="en"
             />
 
             <ArticleSeoSection
+              articleId={currentArticleId}
               title={enTitle}
               slug={enSlug}
               content={enContent}
@@ -362,6 +424,10 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               setIsSeoTitleOverridden={setIsEnSeoTitleOverridden}
               isSeoDescriptionOverridden={isEnSeoDescriptionOverridden}
               setIsSeoDescriptionOverridden={setIsEnSeoDescriptionOverridden}
+              focusKeyword={enFocusKeyword}
+              setFocusKeyword={setEnFocusKeyword}
+              lang="en"
+              thumbnailKey={thumbnailKey}
             />
           </div>
         </div>
@@ -461,6 +527,11 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
           confirmAction?.()
           setConfirmOpen(false)
         }}
+      />
+      <AiGenerateModal
+        isOpen={isAiGenerateOpen}
+        onClose={() => setIsAiGenerateOpen(false)}
+        onGenerateSuccess={handleAiGenerateSuccess}
       />
     </div>
   )

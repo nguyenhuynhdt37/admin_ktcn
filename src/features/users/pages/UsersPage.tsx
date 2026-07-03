@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { DataTable } from '@/shared/components/DataTable'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/shared/components/ui/badge'
@@ -60,21 +60,80 @@ export function UsersPage() {
   const canDelete = hasPermission('user.delete')
   const isCallerSuperAdmin = currentUser?.roles?.includes('super_admin')
 
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [page, setPage] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const pageParam = Number(searchParams.get('page'))
+  const page = (pageParam && pageParam > 0) ? pageParam - 1 : 0
+  const roleFilter = searchParams.get('role_code') || 'all'
+  const statusFilter = searchParams.get('is_active') === 'true' ? 'active' : searchParams.get('is_active') === 'false' ? 'inactive' : 'all'
+  const urlSearch = searchParams.get('search') || ''
+
+  const [search, setSearch] = useState(urlSearch)
+  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch)
   const pageSize = 10
 
-  // Debounce search query to prevent excessive API calls
+  // Chuẩn hóa trang nếu URL chứa page=0 hoặc nhỏ hơn 1
+  useEffect(() => {
+    const pParam = searchParams.get('page')
+    if (pParam !== null) {
+      const pageNum = Number(pParam)
+      if (isNaN(pageNum) || pageNum < 1) {
+        const params = new URLSearchParams(searchParams)
+        params.set('page', '1')
+        setSearchParams(params)
+      }
+    }
+  }, [searchParams, setSearchParams])
+
+  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search)
-      setPage(0) // Reset to first page when search changes
     }, 400)
     return () => clearTimeout(timer)
   }, [search])
+
+  // Đồng bộ search lên URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (debouncedSearch.trim()) {
+      params.set('search', debouncedSearch.trim())
+    } else {
+      params.delete('search')
+    }
+    params.set('page', '1') // reset trang khi tìm kiếm
+    setSearchParams(params)
+  }, [debouncedSearch])
+
+  const handleRoleFilterChange = (val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val !== 'all') {
+      params.set('role_code', val)
+    } else {
+      params.delete('role_code')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }
+
+  const handleStatusFilterChange = (val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val === 'active') {
+      params.set('is_active', 'true')
+    } else if (val === 'inactive') {
+      params.set('is_active', 'false')
+    } else {
+      params.delete('is_active')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    params.set('page', String(newPage + 1))
+    setSearchParams(params)
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', debouncedSearch, roleFilter, statusFilter, page],
@@ -284,10 +343,7 @@ export function UsersPage() {
           />
           <Select
             value={roleFilter}
-            onValueChange={(val) => {
-              setRoleFilter(val)
-              setPage(0)
-            }}
+            onValueChange={handleRoleFilterChange}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Chọn vai trò" />
@@ -302,10 +358,7 @@ export function UsersPage() {
           </Select>
           <Select
             value={statusFilter}
-            onValueChange={(val) => {
-              setStatusFilter(val)
-              setPage(0)
-            }}
+            onValueChange={handleStatusFilterChange}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Trạng thái" />
@@ -332,7 +385,7 @@ export function UsersPage() {
           totalCount={data?.total || 0}
           pageCount={data?.total_pages || 0}
           pageIndex={page}
-          onPageChange={setPage}
+          onPageChange={handlePageChange}
         />
       )}
     </div>

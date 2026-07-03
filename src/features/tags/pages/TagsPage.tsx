@@ -155,8 +155,6 @@ export function TagsPage() {
             pageIndex={pagination.pageIndex}
             onPageChange={(pageIndex) => setPagination((p) => ({ ...p, pageIndex }))}
             isLoading={isLoading || isFetching}
-            sorting={sorting}
-            onSortingChange={setSorting}
             rowSelection={rowSelection}
             onRowSelectionChange={setRowSelection}
             onPageSizeChange={(pageSize) => setPagination((p) => ({ ...p, pageSize, pageIndex: 0 }))}

@@ -5,28 +5,16 @@ import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/shared/components/ui/select'
-import { ChevronDown, Globe, Sparkles, Loader2 } from 'lucide-react'
+import { ChevronDown, Globe, Sparkles, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { httpClient } from '@/services/http/client'
-import { toast } from 'sonner'
+import { Switch } from '@/shared/components/ui/switch'
 import { SEO_CONFIG } from '../../constants'
-import { cleanHtml, generateSeoTitle, generateSeoDescription } from '@/shared/utils/seo'
-
-// Helpers
-function generateSlug(text: string): string {
-  return text
-    .toString()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Bỏ dấu
-    .replace(/[đĐ]/g, 'd')
-    .replace(/([^0-9a-z-\s])/g, '') // Bỏ ký tự đặc biệt
-    .replace(/(\s+)/g, '-') // Đổi khoảng trắng thành -
-    .replace(/-+/g, '-') // Bỏ - trùng lặp
-    .replace(/^-+|-+$/g, '') // Bỏ - ở đầu/cuối
-}
+import { generateSeoTitle, generateSeoDescription } from '@/shared/utils/seo'
+import { SeoAnalysisPanel } from './SeoAnalysisPanel'
+import type { SeoAnalysisResponse } from '../../types/articles.types'
 
 interface ArticleSeoSectionProps {
+  articleId: string | null
   title: string
   slug: string
   content: string
@@ -52,9 +40,16 @@ interface ArticleSeoSectionProps {
   setIsSeoTitleOverridden: (value: boolean) => void
   isSeoDescriptionOverridden: boolean
   setIsSeoDescriptionOverridden: (value: boolean) => void
+
+  // Props cho AI SEO Assistant
+  focusKeyword: string
+  setFocusKeyword: (value: string) => void
+  lang: 'vi' | 'en'
+  thumbnailKey: string | null
 }
 
 export function ArticleSeoSection({
+  articleId,
   title,
   slug,
   content,
@@ -79,18 +74,34 @@ export function ArticleSeoSection({
   setIsSeoTitleOverridden,
   isSeoDescriptionOverridden,
   setIsSeoDescriptionOverridden,
+
+  focusKeyword,
+  setFocusKeyword,
+  lang,
+  thumbnailKey,
 }: ArticleSeoSectionProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [analysis, setAnalysis] = useState<SeoAnalysisResponse | null>(null)
 
-  const maxTitleLength = Math.max(0, SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH - SEO_CONFIG.SUFFIX.length)
+  const maxTitleLength = SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH
 
   // Render Title và Description thực tế hiển thị trên Google SERP Preview
-  const displayTitle = (seoTitle.trim() || generateSeoTitle(title) || 'Tiêu đề bài viết') + SEO_CONFIG.SUFFIX
+  const displayTitle = seoTitle.trim() || generateSeoTitle(title) || 'Tiêu đề bài viết'
   const displayDesc = seoDescription.trim() || generateSeoDescription(content, excerpt) || 'Mô tả chi tiết bài viết...'
 
   // Bộ đếm ký tự
   const titleCharCount = displayTitle.length
   const descCharCount = displayDesc.length
+
+  const handleApplyTitle = (generatedTitle: string) => {
+    setIsSeoTitleOverridden(true)
+    setSeoTitle(generatedTitle)
+  }
+
+  const handleApplyDescription = (generatedDesc: string) => {
+    setIsSeoDescriptionOverridden(true)
+    setSeoDescription(generatedDesc)
+  }
 
   return (
     <Card className="bg-card text-card-foreground">
@@ -119,20 +130,53 @@ export function ArticleSeoSection({
           </div>
         </div>
 
+        {/* Panel Phân tích SEO bằng AI (Đã được đóng gói vào Sub-component) */}
+        <SeoAnalysisPanel
+          articleId={articleId}
+          title={title}
+          slug={slug}
+          content={content}
+          excerpt={excerpt}
+          seoTitle={seoTitle}
+          setSeoTitle={setSeoTitle}
+          setIsSeoTitleOverridden={setIsSeoTitleOverridden}
+          seoDescription={seoDescription}
+          setSeoDescription={setSeoDescription}
+          setIsSeoDescriptionOverridden={setIsSeoDescriptionOverridden}
+          focusKeyword={focusKeyword}
+          setFocusKeyword={setFocusKeyword}
+          lang={lang}
+          thumbnailKey={thumbnailKey}
+          disabled={disabled}
+          onAnalysisChange={setAnalysis}
+        />
+
         {/* Basic SEO inputs */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-3 border-t border-border/40">
           <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label htmlFor="seoTitle" className="text-xs font-semibold text-foreground/80">
-                Tiêu đề SEO (seo_title)
-              </Label>
+            <div className="flex justify-between items-center text-left">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="seoTitle" className="text-xs font-semibold text-foreground/80">
+                  Tiêu đề SEO (seo_title)
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Switch
+                    id="seoTitleOverride"
+                    checked={isSeoTitleOverridden}
+                    onCheckedChange={setIsSeoTitleOverridden}
+                    disabled={disabled}
+                    className="scale-75 cursor-pointer"
+                  />
+                  <span className="text-[10px] text-muted-foreground select-none">Tự tùy chỉnh</span>
+                </div>
+              </div>
               <span
                 className={cn(
                   'text-[10px]',
                   titleCharCount > SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH ? 'text-destructive font-semibold' : 'text-muted-foreground'
                 )}
               >
-                {titleCharCount}/{SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH} ký tự (tự sinh)
+                {titleCharCount}/{SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH} {isSeoTitleOverridden ? 'ký tự' : 'ký tự (tự sinh)'}
               </span>
             </div>
             <Input
@@ -140,27 +184,58 @@ export function ArticleSeoSection({
               placeholder="Nhập tiêu đề SEO..."
               value={seoTitle}
               onChange={(e) => setSeoTitle(e.target.value)}
-              disabled={true}
+              disabled={disabled || !isSeoTitleOverridden}
               maxLength={maxTitleLength}
-              className="h-10 text-sm bg-muted/30 cursor-not-allowed"
+              className={cn(
+                "h-10 text-sm",
+                (!isSeoTitleOverridden || disabled) ? "bg-muted/30 cursor-not-allowed" : "bg-background"
+              )}
             />
-            <p className="text-[10px] text-muted-foreground/60 leading-normal">
-              Hệ thống sẽ tự động ghép thêm hậu tố thương hiệu "{SEO_CONFIG.SUFFIX}" khi hiển thị.
-            </p>
+
+            {/* Đề xuất tiêu đề từ AI */}
+            {analysis?.generated_seo_title && (
+              <div className="mt-2 p-2.5 rounded-lg border border-purple-500/15 bg-purple-500/5 flex items-center justify-between gap-3 text-xs text-left animate-fade-in">
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">Tiêu đề SEO đề xuất từ AI:</span>
+                  <p className="font-medium text-foreground truncate">{analysis.generated_seo_title}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  onClick={() => handleApplyTitle(analysis.generated_seo_title)}
+                  className="h-6 px-2 text-[10px] border-purple-500/20 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white shrink-0 cursor-pointer"
+                >
+                  Áp dụng
+                </Button>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 text-left">
             <div className="flex justify-between items-center">
-              <Label htmlFor="seoDescription" className="text-xs font-semibold text-foreground/80">
-                Mô tả SEO (seo_description)
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="seoDescription" className="text-xs font-semibold text-foreground/80">
+                  Mô tả SEO (seo_description)
+                </Label>
+                <div className="flex items-center gap-1">
+                  <Switch
+                    id="seoDescOverride"
+                    checked={isSeoDescriptionOverridden}
+                    onCheckedChange={setIsSeoDescriptionOverridden}
+                    disabled={disabled}
+                    className="scale-75 cursor-pointer"
+                  />
+                  <span className="text-[10px] text-muted-foreground select-none">Tự tùy chỉnh</span>
+                </div>
+              </div>
               <span
                 className={cn(
                   'text-[10px]',
                   descCharCount > SEO_CONFIG.MAX_DESCRIPTION_LENGTH ? 'text-destructive font-semibold' : 'text-muted-foreground'
                 )}
               >
-                {descCharCount}/{SEO_CONFIG.MAX_DESCRIPTION_LENGTH} ký tự (tự sinh)
+                {descCharCount}/{SEO_CONFIG.MAX_DESCRIPTION_LENGTH} {isSeoDescriptionOverridden ? 'ký tự' : 'ký tự (tự sinh)'}
               </span>
             </div>
             <Textarea
@@ -168,15 +243,37 @@ export function ArticleSeoSection({
               placeholder="Nhập đoạn trích ngắn cho công cụ tìm kiếm..."
               value={seoDescription}
               onChange={(e) => setSeoDescription(e.target.value)}
-              disabled={true}
-              className="min-h-20 text-sm resize-none bg-muted/30 cursor-not-allowed"
+              disabled={disabled || !isSeoDescriptionOverridden}
+              className={cn(
+                "min-h-20 text-sm resize-none",
+                (!isSeoDescriptionOverridden || disabled) ? "bg-muted/30 cursor-not-allowed" : "bg-background"
+              )}
             />
+
+            {/* Đề xuất mô tả từ AI */}
+            {analysis?.generated_meta_description && (
+              <div className="mt-2 p-2.5 rounded-lg border border-purple-500/15 bg-purple-500/5 flex items-center justify-between gap-3 text-xs text-left animate-fade-in">
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">Mô tả SEO đề xuất từ AI:</span>
+                  <p className="text-muted-foreground leading-relaxed line-clamp-2">{analysis.generated_meta_description}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  onClick={() => handleApplyDescription(analysis.generated_meta_description)}
+                  className="h-6 px-2 text-[10px] border-purple-500/20 text-purple-600 dark:text-purple-400 hover:bg-purple-600 hover:text-white shrink-0 cursor-pointer"
+                >
+                  Áp dụng
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Advanced Accordion section */}
-      <div className="border-t border-border/40">
+      <div className="border-t border-border/40 text-left">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}

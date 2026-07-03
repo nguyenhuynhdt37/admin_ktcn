@@ -4,6 +4,9 @@ export interface User {
   id: string
   username: string
   email: string
+  full_name: string
+  avatar_url: string | null
+  roles: string[]
   is_active: boolean
 }
 

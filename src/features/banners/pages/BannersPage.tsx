@@ -32,6 +32,9 @@ const positionFilterOptions = [
   { value: BannerPosition.PAGE_TOP, label: 'Banner đầu trang tĩnh/trang con' },
 ]
 
+import { useSearchParams } from 'react-router'
+import { useEffect } from 'react'
+
 export function BannersPage() {
   const queryClient = useQueryClient()
 
@@ -39,29 +42,100 @@ export function BannersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null)
 
-  // Filters & Table states
-  const [searchInput, setSearchInput] = useState('')
-  const debouncedSearchQuery = useDebounce(searchInput, 500)
-  const [selectedPosition, setSelectedPosition] = useState<string>('all')
-
+  // Filters & Table states (URL Search Params)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'sort_order', desc: false }
-  ])
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  })
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const pageParam = Number(searchParams.get('page'))
+  const pageIndex = (pageParam && pageParam > 0) ? pageParam - 1 : 0
+  const pageSize = Number(searchParams.get('page_size')) || 10
+  const sortBy = searchParams.get('sort_by') || 'sort_order'
+  const sortDir = searchParams.get('sort_dir') || 'asc'
+  const selectedPosition = searchParams.get('position') || 'all'
+  const urlSearch = searchParams.get('search') || ''
+
+  const [searchInput, setSearchInput] = useState(urlSearch)
+  const debouncedSearchQuery = useDebounce(searchInput, 500)
+
+  // Chuẩn hóa trang nếu URL chứa page=0 hoặc nhỏ hơn 1
+  useEffect(() => {
+    const pParam = searchParams.get('page')
+    if (pParam !== null) {
+      const pageNum = Number(pParam)
+      if (isNaN(pageNum) || pageNum < 1) {
+        const params = new URLSearchParams(searchParams)
+        params.set('page', '1')
+        setSearchParams(params)
+      }
+    }
+  }, [searchParams, setSearchParams])
+
+  // Đồng bộ search term từ ô input lên URL sau khi debounced
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (debouncedSearchQuery.trim()) {
+      params.set('search', debouncedSearchQuery.trim())
+    } else {
+      params.delete('search')
+    }
+    params.set('page', '1') // reset trang khi tìm kiếm
+    setSearchParams(params)
+  }, [debouncedSearchQuery])
+
+  const handlePositionFilterChange = useCallback((val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val !== 'all') {
+      params.set('position', val)
+    } else {
+      params.delete('position')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const pagination = useMemo<PaginationState>(() => ({
+    pageIndex,
+    pageSize,
+  }), [pageIndex, pageSize])
+
+  const sorting = useMemo<SortingState>(() => [{
+    id: sortBy,
+    desc: sortDir === 'desc',
+  }], [sortBy, sortDir])
+
+  const setPagination = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    if (typeof value === 'function') {
+      const next = value({ pageIndex, pageSize })
+      params.set('page', String(next.pageIndex + 1))
+      params.set('page_size', String(next.pageSize))
+    } else {
+      params.set('page', String(value.pageIndex + 1))
+      params.set('page_size', String(value.pageSize))
+    }
+    setSearchParams(params)
+  }, [pageIndex, pageSize, searchParams, setSearchParams])
+
+  const setSorting = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    const nextSorting = typeof value === 'function' ? value(sorting) : value
+    if (nextSorting.length > 0) {
+      params.set('sort_by', nextSorting[0].id)
+      params.set('sort_dir', nextSorting[0].desc ? 'desc' : 'asc')
+      params.set('page', '1')
+    }
+    setSearchParams(params)
+  }, [sorting, searchParams, setSearchParams])
 
   // 1. Query: Fetch banners list (Server-side paginated & filtered)
   const listParams = useMemo(() => ({
-    page: pagination.pageIndex + 1,
-    page_size: pagination.pageSize,
+    page: pageIndex + 1,
+    page_size: pageSize,
     search: debouncedSearchQuery.trim() || null,
     position: selectedPosition === 'all' ? null : selectedPosition,
-    sort_by: sorting[0]?.id || 'sort_order',
-    order: (sorting[0]?.desc ? 'desc' as const : 'asc' as const),
-  }), [pagination, debouncedSearchQuery, selectedPosition, sorting])
+    sort_by: sortBy,
+    order: sortDir as 'asc' | 'desc',
+  }), [pageIndex, pageSize, debouncedSearchQuery, selectedPosition, sortBy, sortDir])
 
   const {
     data: bannerData = { items: [], total_items: 0, total_pages: 1 },
@@ -220,7 +294,6 @@ export function BannersPage() {
               value={searchInput}
               onChange={(e) => {
                 setSearchInput(e.target.value)
-                setPagination((p) => ({ ...p, pageIndex: 0 }))
               }}
               className="pl-8 text-xs h-9 bg-background focus-visible:ring-primary/20"
             />
@@ -234,10 +307,7 @@ export function BannersPage() {
           <SearchableSelect
             options={positionFilterOptions}
             value={selectedPosition}
-            onValueChange={(val) => {
-              setSelectedPosition(val)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
+            onValueChange={handlePositionFilterChange}
             placeholder="Tất cả vị trí"
             emptyMessage="Không tìm thấy vị trí."
           />
@@ -247,12 +317,13 @@ export function BannersPage() {
         {(searchInput !== '' || selectedPosition !== 'all') && (
           <div className="flex items-end pb-0.5">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
                 setSearchInput('')
-                setSelectedPosition('all')
-                setPagination((p) => ({ ...p, pageIndex: 0 }))
+                const params = new URLSearchParams()
+                setSearchParams(params)
               }}
               className="text-xs h-8 text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1"
             >

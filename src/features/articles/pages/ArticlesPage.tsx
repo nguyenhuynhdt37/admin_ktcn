@@ -15,7 +15,7 @@ import {
   Trash,
   X
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import type { SortingState, RowSelectionState } from '@tanstack/react-table'
 
@@ -56,7 +56,7 @@ const initialFilters: ArticleListParams = {
   published_from: null,
   published_to: null,
   deleted: false,
-  sort_by: 'created_at',
+  sort_by: 'published_at',
   sort_dir: 'desc',
 }
 
@@ -64,33 +64,93 @@ export function ArticlesPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user: currentUser } = useAuthStore()
-  const [filters, setFilters] = React.useState<ArticleListParams>(initialFilters)
   const [articleToDelete, setArticleToDelete] = React.useState<string | null>(null)
   
   // State quản lý việc chọn các dòng dữ liệu (Row Selection)
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
 
-  // State sorting đồng bộ với DataTable dùng chung của dự án
-  const [sorting, setSorting] = React.useState<SortingState>([
-    { id: 'created_at', desc: true },
-  ])
+  // Đọc filters và sorting trực tiếp từ URL Search Params làm single source of truth
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  // Đồng bộ state sorting sang filters param
-  React.useEffect(() => {
-    if (sorting.length > 0) {
-      const sortField = sorting[0].id as any
-      const sortDir = sorting[0].desc ? 'desc' : 'asc'
-      setFilters((prev) => {
-        if (prev.sort_by === sortField && prev.sort_dir === sortDir) return prev
-        return {
-          ...prev,
-          sort_by: sortField,
-          sort_dir: sortDir,
-          page: 1,
-        }
-      })
+  const filters = React.useMemo<ArticleListParams>(() => {
+    const page = Number(searchParams.get('page')) || 1
+    const page_size = Number(searchParams.get('page_size')) || 10
+    const search = searchParams.get('search') || null
+    const category_id = searchParams.get('category_id') || null
+    const author_id = searchParams.get('author_id') || null
+    const tag_ids = searchParams.get('tag_ids') ? searchParams.get('tag_ids')!.split(',') : null
+    const status = (searchParams.get('status') as any) || null
+    const is_featured = searchParams.get('is_featured') === 'true' ? true : searchParams.get('is_featured') === 'false' ? false : null
+    const is_pinned = searchParams.get('is_pinned') === 'true' ? true : searchParams.get('is_pinned') === 'false' ? false : null
+    const is_draft = searchParams.get('is_draft') === 'true'
+    const deleted = searchParams.get('deleted') === 'true'
+    
+    // Mặc định sắp xếp theo ngày giờ xuất bản giảm dần (published_at - desc)
+    const sort_by = searchParams.get('sort_by') || 'published_at'
+    const sort_dir = (searchParams.get('sort_dir') as any) || 'desc'
+
+    return {
+      page,
+      page_size,
+      search,
+      category_id,
+      author_id,
+      tag_ids,
+      status,
+      is_featured,
+      is_pinned,
+      is_draft,
+      deleted,
+      sort_by,
+      sort_dir,
     }
-  }, [sorting])
+  }, [searchParams])
+
+  const setFilters = React.useCallback((
+    newFilters: ArticleListParams | ((prev: ArticleListParams) => ArticleListParams)
+  ) => {
+    const nextFilters = typeof newFilters === 'function' ? newFilters(filters) : newFilters
+    const params: Record<string, string> = {}
+    
+    if (nextFilters.page && nextFilters.page > 1) params.page = String(nextFilters.page)
+    if (nextFilters.page_size && nextFilters.page_size !== 10) params.page_size = String(nextFilters.page_size)
+    if (nextFilters.search) params.search = nextFilters.search
+    if (nextFilters.category_id) params.category_id = nextFilters.category_id
+    if (nextFilters.author_id) params.author_id = nextFilters.author_id
+    if (nextFilters.tag_ids && nextFilters.tag_ids.length > 0) params.tag_ids = nextFilters.tag_ids.join(',')
+    if (nextFilters.status) params.status = nextFilters.status
+    if (nextFilters.is_featured !== null && nextFilters.is_featured !== undefined) params.is_featured = String(nextFilters.is_featured)
+    if (nextFilters.is_pinned !== null && nextFilters.is_pinned !== undefined) params.is_pinned = String(nextFilters.is_pinned)
+    if (nextFilters.is_draft) params.is_draft = 'true'
+    if (nextFilters.deleted) params.deleted = 'true'
+    
+    params.sort_by = nextFilters.sort_by || 'published_at'
+    params.sort_dir = nextFilters.sort_dir || 'desc'
+
+    setSearchParams(params)
+  }, [filters, setSearchParams])
+
+  const sorting = React.useMemo<SortingState>(() => {
+    const sortBy = searchParams.get('sort_by') || 'published_at'
+    const sortDir = searchParams.get('sort_dir') || 'desc'
+    return [{ id: sortBy, desc: sortDir === 'desc' }]
+  }, [searchParams])
+
+  const handleSortingChange = React.useCallback((
+    updaterOrValue: SortingState | ((prev: SortingState) => SortingState)
+  ) => {
+    const nextSorting = typeof updaterOrValue === 'function' ? updaterOrValue(sorting) : updaterOrValue
+    if (nextSorting.length > 0) {
+      const sortField = nextSorting[0].id
+      const sortDir = nextSorting[0].desc ? 'desc' : 'asc'
+      setFilters((prev) => ({
+        ...prev,
+        sort_by: sortField,
+        sort_dir: sortDir,
+        page: 1,
+      }))
+    }
+  }, [sorting, setFilters])
 
   // Fetch list articles using React Query
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
@@ -193,23 +253,27 @@ export function ArticlesPage() {
 
   const handleFilterChange = React.useCallback((newFilters: ArticleListParams) => {
     setFilters(newFilters)
-  }, [])
+  }, [setFilters])
 
   const handleResetFilters = React.useCallback(() => {
     setFilters({
       ...initialFilters,
       deleted: filters.deleted,
+      sort_by: 'published_at',
+      sort_dir: 'desc',
     })
-  }, [filters.deleted])
+  }, [filters.deleted, setFilters])
 
   const handlePageChange = React.useCallback((newPage: number) => {
     setFilters((prev) => ({ ...prev, page: newPage }))
-  }, [])
+  }, [setFilters])
 
   const handleTabChange = (value: string) => {
     setFilters({
       ...initialFilters,
       deleted: value === 'trash',
+      sort_by: 'published_at',
+      sort_dir: 'desc',
     })
     setRowSelection({}) // Reset lựa chọn khi chuyển tab
   }
@@ -416,7 +480,7 @@ export function ArticlesPage() {
           onPageChange={(index) => handlePageChange(index + 1)}
           isLoading={isLoading || isFetching}
           sorting={sorting}
-          onSortingChange={setSorting}
+          onSortingChange={handleSortingChange}
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
           onPageSizeChange={(size) =>

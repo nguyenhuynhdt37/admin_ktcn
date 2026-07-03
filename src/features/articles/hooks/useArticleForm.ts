@@ -81,6 +81,53 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   const [enOgDescription, setEnOgDescription] = useState('')
   const [isCheckingEnSlug, setIsCheckingEnSlug] = useState(false)
 
+  // SEO Focus Keywords (chỉ lưu local để phân tích)
+  const [viFocusKeyword, setViFocusKeyword] = useState('')
+  const [enFocusKeyword, setEnFocusKeyword] = useState('')
+
+  // --- HANDLER ĐỒNG BỘ CẤU HÌNH SEO EVENT-DRIVEN ---
+  const handleSetViTitle = (val: string) => {
+    setViTitle(val)
+    if (!isViSeoTitleOverridden) {
+      setViSeoTitle(generateSeoTitle(val))
+    }
+  }
+
+  const handleSetEnTitle = (val: string) => {
+    setEnTitle(val)
+    if (!isEnSeoTitleOverridden) {
+      setEnSeoTitle(generateSeoTitle(val))
+    }
+  }
+
+  const handleSetViExcerpt = (val: string) => {
+    setViExcerpt(val)
+    if (!isViSeoDescriptionOverridden) {
+      setViSeoDescription(generateSeoDescription(viContent, val))
+    }
+  }
+
+  const handleSetViContent = (val: string) => {
+    setViContent(val)
+    if (!isViSeoDescriptionOverridden) {
+      setViSeoDescription(generateSeoDescription(val, viExcerpt))
+    }
+  }
+
+  const handleSetEnExcerpt = (val: string) => {
+    setEnExcerpt(val)
+    if (!isEnSeoDescriptionOverridden) {
+      setEnSeoDescription(generateSeoDescription(enContent, val))
+    }
+  }
+
+  const handleSetEnContent = (val: string) => {
+    setEnContent(val)
+    if (!isEnSeoDescriptionOverridden) {
+      setEnSeoDescription(generateSeoDescription(val, enExcerpt))
+    }
+  }
+
   // --- CẤU HÌNH CHUNG ---
   const [categoryId, setCategoryId] = useState('')
   const [tagIds, setTagIds] = useState<string[]>([])
@@ -269,31 +316,7 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     }
   }, [viContent])
 
-  // Auto-sync SEO Title
-  useEffect(() => {
-    if (!isViSeoTitleOverridden) {
-      setViSeoTitle(generateSeoTitle(viTitle))
-    }
-  }, [viTitle, isViSeoTitleOverridden])
 
-  useEffect(() => {
-    if (!isEnSeoTitleOverridden) {
-      setEnSeoTitle(generateSeoTitle(enTitle))
-    }
-  }, [enTitle, isEnSeoTitleOverridden])
-
-  // Auto-sync SEO Description
-  useEffect(() => {
-    if (!isViSeoDescriptionOverridden) {
-      setViSeoDescription(generateSeoDescription(viContent, viExcerpt))
-    }
-  }, [viExcerpt, viContent, isViSeoDescriptionOverridden])
-
-  useEffect(() => {
-    if (!isEnSeoDescriptionOverridden) {
-      setEnSeoDescription(generateSeoDescription(enContent, enExcerpt))
-    }
-  }, [enExcerpt, enContent, isEnSeoDescriptionOverridden])
 
   // Debounce check slug - Tiếng Việt
   useEffect(() => {
@@ -809,14 +832,19 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     isEnSeoDescriptionOverridden,
     setIsEnSeoDescriptionOverridden,
 
+    viFocusKeyword,
+    setViFocusKeyword,
+    enFocusKeyword,
+    setEnFocusKeyword,
+
     viTitle,
-    setViTitle,
+    setViTitle: handleSetViTitle,
     viSlug,
     setViSlug,
     viExcerpt,
-    setViExcerpt,
+    setViExcerpt: handleSetViExcerpt,
     viContent,
-    setViContent,
+    setViContent: handleSetViContent,
     viSeoTitle,
     setViSeoTitle,
     viSeoDescription,
@@ -832,13 +860,13 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     isCheckingViSlug,
 
     enTitle,
-    setEnTitle,
+    setEnTitle: handleSetEnTitle,
     enSlug,
     setEnSlug,
     enExcerpt,
-    setEnExcerpt,
+    setEnExcerpt: handleSetEnExcerpt,
     enContent,
-    setEnContent,
+    setEnContent: handleSetEnContent,
     enSeoTitle,
     setEnSeoTitle,
     enSeoDescription,

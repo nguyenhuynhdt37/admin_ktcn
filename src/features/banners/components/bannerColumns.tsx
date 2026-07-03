@@ -1,5 +1,4 @@
-import type { ColumnDef } from '@tanstack/react-table'
-import { Edit, Trash2, MoreHorizontal, ExternalLink } from 'lucide-react'
+import { Edit, Trash2, MoreHorizontal, ExternalLink, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Checkbox } from '@/shared/components/ui/checkbox'
@@ -80,7 +79,16 @@ export const getBannerColumns = ({
   },
   {
     accessorKey: 'title',
-    header: 'Tiêu đề & liên kết',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="-ml-4 cursor-pointer"
+      >
+        Tiêu đề & liên kết
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const item = row.original
       return (
@@ -124,7 +132,16 @@ export const getBannerColumns = ({
   },
   {
     accessorKey: 'sort_order',
-    header: 'Sắp xếp',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="-ml-4 cursor-pointer"
+      >
+        Sắp xếp
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => <span className="font-mono text-xs">{row.original.sort_order}</span>,
   },
   {

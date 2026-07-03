@@ -83,17 +83,10 @@ export function useArticlePreview() {
   const seoAnalysis = useMemo<SeoAnalysis | null>(() => {
     if (!displayData) return null
 
-    const maxTitleLen = Math.max(0, SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH - SEO_CONFIG.SUFFIX.length)
-    let cleanTitle = displayData.seo_title
-    if (cleanTitle.endsWith(SEO_CONFIG.SUFFIX)) {
-      cleanTitle = cleanTitle.slice(0, -SEO_CONFIG.SUFFIX.length)
-    }
-    const baseFallback = displayData.title
-      ? displayData.title.length > maxTitleLen
-        ? displayData.title.slice(0, maxTitleLen)
-        : displayData.title
-      : ''
-    const finalTitle = (cleanTitle.trim() || baseFallback) + SEO_CONFIG.SUFFIX
+    const maxTitleLen = SEO_CONFIG.MAX_TOTAL_TITLE_LENGTH
+    const cleanTitle = displayData.seo_title || ''
+    const baseFallback = displayData.title || ''
+    const finalTitle = cleanTitle.trim() || baseFallback
 
     const fallbackDesc =
       displayData.excerpt ||

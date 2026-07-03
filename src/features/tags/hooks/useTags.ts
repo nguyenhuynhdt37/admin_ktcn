@@ -1,12 +1,14 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { SortingState, RowSelectionState, PaginationState } from '@tanstack/react-table'
+import type { SortingState, RowSelectionState } from '@tanstack/react-table'
 import { tagService } from '../services/tagService'
 import { toast } from 'sonner'
 import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useSearchParams } from 'react-router'
 
 export function useTags() {
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // UI states
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -15,36 +17,80 @@ export function useTags() {
     ids: string[]
   } | null>(null)
 
-  // Filters state
-  const [search, setSearch] = useState('')
+  // Filters from URL Search Params
+  const pageParam = Number(searchParams.get('page'))
+  const pageIndex = (pageParam && pageParam > 0) ? pageParam - 1 : 0
+  const pageSize = Number(searchParams.get('limit')) || 10
+  const isActiveFilter = searchParams.get('is_active') || 'all'
+  const urlSearch = searchParams.get('search') || ''
+
+  const [search, setSearch] = useState(urlSearch)
   const debouncedSearch = useDebounce(search, 400)
-  const [isActiveFilter, setIsActiveFilter] = useState<string>('all')
 
-  // Table states (Server-side pagination & sorting)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'sort_order', desc: false }
-  ])
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  })
-
-  // Reset pagination to first page when search or status filters change
+  // Chuẩn hóa trang nếu URL chứa page=0 hoặc nhỏ hơn 1
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-  }, [debouncedSearch, isActiveFilter])
+    const pParam = searchParams.get('page')
+    if (pParam !== null) {
+      const pageNum = Number(pParam)
+      if (isNaN(pageNum) || pageNum < 1) {
+        const params = new URLSearchParams(searchParams)
+        params.set('page', '1')
+        setSearchParams(params)
+      }
+    }
+  }, [searchParams, setSearchParams])
+
+  // Đồng bộ search term từ ô input lên URL sau khi debounced
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (debouncedSearch.trim()) {
+      params.set('search', debouncedSearch.trim())
+    } else {
+      params.delete('search')
+    }
+    params.set('page', '1') // reset trang khi tìm kiếm
+    setSearchParams(params)
+  }, [debouncedSearch])
+
+  // Custom setters để đồng bộ filter lên URL
+  const handleActiveFilterChange = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (value !== 'all') {
+      params.set('is_active', value)
+    } else {
+      params.delete('is_active')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const handlePaginationChange = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    if (typeof value === 'function') {
+      const next = value({ pageIndex, pageSize })
+      params.set('page', String(next.pageIndex + 1))
+      params.set('limit', String(next.pageSize))
+    } else {
+      params.set('page', String(value.pageIndex + 1))
+      params.set('limit', String(value.pageSize))
+    }
+    setSearchParams(params)
+  }, [pageIndex, pageSize, searchParams, setSearchParams])
+
+  // Table states (Chỉ giữ rowSelection ở local, sorting client-side)
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [sorting, setSorting] = useState<SortingState>([])
 
   // 1. Query: Fetch tag list
   const listParams = useMemo(() => {
     const is_active = isActiveFilter === 'active' ? true : isActiveFilter === 'inactive' ? false : null
     return {
-      page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
+      page: pageIndex + 1,
+      limit: pageSize,
       search: debouncedSearch.trim() || null,
       is_active: is_active,
     }
-  }, [pagination, debouncedSearch, isActiveFilter])
+  }, [pageIndex, pageSize, debouncedSearch, isActiveFilter])
 
   const {
     data: tagData,
@@ -230,12 +276,12 @@ export function useTags() {
     setRowSelection,
     sorting,
     setSorting,
-    pagination,
-    setPagination,
+    pagination: { pageIndex, pageSize },
+    setPagination: handlePaginationChange,
     search,
     setSearch,
     isActiveFilter,
-    setIsActiveFilter,
+    setIsActiveFilter: handleActiveFilterChange,
 
     // Data
     tags,

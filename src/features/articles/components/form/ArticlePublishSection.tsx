@@ -64,17 +64,19 @@ export function ArticlePublishSection({
   onCreateTag,
   errors,
 }: ArticlePublishSectionProps) {
-  // Map categories to autocomplete options
+  // Map categories to autocomplete options (include article_count)
   const categoryOptions = categories.map((c) => ({
     id: c.id,
     label: c.name,
+    article_count: c.article_count || 0,
   }))
 
-  // Map tags to autocomplete options (include color)
+  // Map tags to autocomplete options (include color and article_count)
   const tagOptions = tags.map((t) => ({
     id: t.id,
-    label: t.name,
+    label: t.name || '',
     color: t.color,
+    article_count: t.article_count || 0,
   }))
 
   return (
@@ -96,6 +98,14 @@ export function ArticlePublishSection({
             searchPlaceholder="Tìm danh mục..."
             emptyMessage="Không tìm thấy danh mục."
             disabled={disabled || isCategoriesLoading}
+            renderOption={(option) => (
+              <div className="flex items-center justify-between w-full py-0.5">
+                <span className="text-sm font-medium">{option.label}</span>
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm font-mono shrink-0">
+                  {option.article_count} bài viết
+                </span>
+              </div>
+            )}
           />
           {errors?.categoryId && (
             <p className="text-xs text-destructive font-medium mt-1 animate-fade-in">{errors.categoryId}</p>
@@ -116,7 +126,20 @@ export function ArticlePublishSection({
             searchPlaceholder="Tìm thẻ tag..."
             emptyMessage="Không tìm thấy thẻ tag."
             disabled={disabled || isTagsLoading}
-            onCreateOption={onCreateTag}
+            renderOption={(option) => (
+              <div className="flex items-center justify-between w-full py-0.5">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full border border-black/10 dark:border-white/10 shrink-0" 
+                    style={{ backgroundColor: option.color || '#94a3b8' }}
+                  />
+                  <span className="text-sm font-medium">{option.label}</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm font-mono shrink-0">
+                  {option.article_count} bài viết
+                </span>
+              </div>
+            )}
           />
         </div>
 

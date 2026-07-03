@@ -11,7 +11,8 @@ import {
   MoreHorizontal,
   Archive,
   Globe,
-  Eye
+  Eye,
+  ArrowUpDown
 } from 'lucide-react'
 import { getMediaUrl } from '../utils/media'
 
@@ -94,7 +95,16 @@ export const getArticleColumns = ({
   },
   {
     accessorKey: 'title',
-    header: 'Bài viết',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="hover:bg-transparent hover:text-foreground p-0 h-auto font-semibold text-muted-foreground gap-1 text-xs -ml-2"
+      >
+        <span>Bài viết</span>
+        <ArrowUpDown className="h-3 w-3" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const article = row.original
       const title = article.translations?.vi?.title || '(Không tiêu đề)'
@@ -253,9 +263,19 @@ export const getArticleColumns = ({
   },
   {
     accessorKey: 'view_count',
-    header: 'Xem',
+    header: ({ column }) => (
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="hover:bg-transparent hover:text-foreground p-0 h-auto font-semibold text-muted-foreground gap-1 text-xs mx-auto flex cursor-pointer"
+      >
+        <span>Xem</span>
+        <ArrowUpDown className="h-3 w-3" />
+      </Button>
+    ),
     cell: ({ row }) => (
-      <span className="font-mono text-xs font-medium text-foreground">
+      <span className="font-mono text-xs font-medium text-foreground block text-center">
         {row.original.view_count.toLocaleString()}
       </span>
     )
@@ -291,7 +311,17 @@ export const getArticleColumns = ({
   },
   {
     accessorKey: 'created_at',
-    header: 'Thời gian',
+    header: ({ column }) => (
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="hover:bg-transparent hover:text-foreground p-0 h-auto font-semibold text-muted-foreground gap-1 text-xs -ml-2 cursor-pointer"
+      >
+        <span>Ngày tạo</span>
+        <ArrowUpDown className="h-3 w-3" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const article = row.original
       return (
@@ -299,21 +329,43 @@ export const getArticleColumns = ({
           <span className="font-semibold text-foreground/80">
             {dayjs(article.created_at).format('DD/MM/YYYY')}
           </span>
-          <span>Tạo: {dayjs(article.created_at).format('HH:mm')}</span>
-          
-          {article.status === 'SCHEDULED' && article.publish_at && (
-            <span className="text-[10px] text-sky-600 font-semibold" title="Thời gian dự kiến xuất bản">
-              Lịch: {dayjs(article.publish_at).format('DD/MM/YYYY HH:mm')}
-            </span>
-          )}
-          
-          {article.status === 'PUBLISHED' && article.published_at && (
-            <span className="text-[10px] text-emerald-600/80 font-medium" title="Thời gian đã xuất bản">
-              Bản: {dayjs(article.published_at).format('DD/MM/YYYY')}
-            </span>
-          )}
+          <span className="text-[10px] text-muted-foreground/75">Lúc: {dayjs(article.created_at).format('HH:mm')}</span>
         </div>
       )
+    }
+  },
+  {
+    accessorKey: 'published_at',
+    header: ({ column }) => (
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="hover:bg-transparent hover:text-foreground p-0 h-auto font-semibold text-muted-foreground gap-1 text-xs -ml-2 cursor-pointer"
+      >
+        <span>Ngày đăng</span>
+        <ArrowUpDown className="h-3 w-3" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const article = row.original
+      if (article.status === 'PUBLISHED' && article.published_at) {
+        return (
+          <div className="flex flex-col text-xs text-emerald-600 gap-0.5 text-left font-medium">
+            <span>{dayjs(article.published_at).format('DD/MM/YYYY')}</span>
+            <span className="text-[10px] opacity-80">Lúc: {dayjs(article.published_at).format('HH:mm')}</span>
+          </div>
+        )
+      }
+      if (article.status === 'SCHEDULED' && article.publish_at) {
+        return (
+          <div className="flex flex-col text-xs text-sky-600 gap-0.5 text-left font-medium">
+            <span>{dayjs(article.publish_at).format('DD/MM/YYYY')}</span>
+            <span className="text-[10px] opacity-80">Lên lịch: {dayjs(article.publish_at).format('HH:mm')}</span>
+          </div>
+        )
+      }
+      return <span className="text-xs text-muted-foreground/60">-</span>
     }
   },
   {

@@ -107,6 +107,7 @@ export interface CategorySearchItem {
   id: string
   name: string
   slug: string
+  article_count?: number
 }
 
 export interface AuthorSearchItem {
@@ -120,6 +121,7 @@ export interface AuthorSearchItem {
 export interface TagSearchItem {
   id: string
   color?: string
+  article_count?: number
   is_translated?: Record<string, boolean>
   translations?: {
     vi: TagTranslation
@@ -181,3 +183,77 @@ export interface ArticleCreatePayload {
     en?: Partial<ArticleTranslation> | null
   }
 }
+
+export interface SeoIssue {
+  type: string
+  message: string
+}
+
+export interface InternalLink {
+  anchor_text: string
+  url: string
+  reason: string
+}
+
+export interface SeoAnalysisResponse {
+  score: number
+  status: 'good' | 'warning' | 'error'
+  issues: SeoIssue[]
+  suggestions: string[]
+  generated_seo_title: string
+  generated_meta_description: string
+  focus_keywords: string[]
+  internal_links: InternalLink[]
+}
+
+export interface SeoAnalyzePayload {
+  title: string
+  content: string
+  excerpt: string
+  seo_title: string | null
+  seo_description: string | null
+  focus_keyword: string | null
+  lang: 'vi' | 'en'
+  thumbnail_object_key?: string | null
+  slug?: string | null
+}
+
+export interface ArticleSEORewriteRequest {
+  content: string
+  focus_keyword?: string | null
+  tone?: 'chuyên nghiệp' | 'thuyết phục' | 'sáng tạo' | 'học thuật' | string
+  lang?: 'vi' | 'en' | string
+}
+
+export interface ArticleSEORewriteResponse {
+  content: string
+}
+
+export interface ArticleGenerateByIdeaRequest {
+  idea: string
+  focus_keyword?: string | null
+  tone?: 'chuyên nghiệp' | 'thuyết phục' | 'sáng tạo' | 'học thuật' | string
+  lang?: 'vi' | 'en' | string
+}
+
+export interface ArticleGenerateByIdeaResponse {
+  title: string
+  excerpt: string
+  content: string
+  seo_title: string
+  seo_description: string
+  slug: string
+}
+
+export interface ArticleSummaryRequest {
+  content: string
+  max_length?: number
+  lang?: 'vi' | 'en' | string
+}
+
+export interface ArticleSummaryResponse {
+  summary: string
+}
+
+
+

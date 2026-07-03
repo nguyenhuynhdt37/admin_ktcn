@@ -32,6 +32,7 @@ import ArticleFormPage from '@/features/articles/pages/ArticleFormPage'
 import ArticleEditPage from '@/features/articles/pages/ArticleEditPage'
 import ArticleDetailPage from '@/features/articles/pages/ArticleDetailPage'
 import { ArticleDraftsPage } from '@/features/articles/pages/ArticleDraftsPage'
+import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { Button } from '@/shared/components/ui/button'
 import { Link } from 'react-router'
 
@@ -174,6 +175,11 @@ export const router = createBrowserRouter([
         element: <EmbeddingSettingsPage />,
       },
 
+
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
 
       {
         path: '*',

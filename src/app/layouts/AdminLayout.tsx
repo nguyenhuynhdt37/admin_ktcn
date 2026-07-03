@@ -43,6 +43,7 @@ import {
 
 import { cn } from '@/lib/utils'
 import logoDhVinh from '@/assets/logo-dhvinh.png'
+import { getMediaUrl } from '@/features/articles/utils/media'
 
 // Imports cho phím tắt và Command Palette
 import { useHotkeys } from '@/shared/hooks/useHotkeys'
@@ -222,11 +223,15 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
 
       <div className="border-t p-4">
         <div className="flex items-center gap-3 px-2 py-1">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted border">
-            <User className="h-4 w-4 text-muted-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted border overflow-hidden shrink-0">
+            {user?.avatar_url ? (
+              <img src={getMediaUrl(user.avatar_url)} alt={user.full_name} className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-medium text-foreground">{user?.username || 'Administrator'}</p>
+          <div className="flex-1 overflow-hidden text-left">
+            <p className="truncate text-sm font-medium text-foreground">{user?.full_name || user?.username || 'Administrator'}</p>
             <p className="truncate text-xs text-muted-foreground">{user?.email || 'admin@example.com'}</p>
           </div>
         </div>
@@ -342,11 +347,15 @@ export function AdminLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-1.5 px-2 hover:bg-muted py-1 h-auto rounded-lg">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted border">
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted border overflow-hidden shrink-0">
+                    {user?.avatar_url ? (
+                      <img src={getMediaUrl(user.avatar_url)} alt={user.full_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
                   </div>
                   <span className="text-sm font-medium hidden sm:inline-block max-w-[100px] truncate">
-                    {user?.username || 'Admin'}
+                    {user?.full_name || user?.username || 'Admin'}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>

@@ -10,8 +10,8 @@ import ArticlePreviewContent from '../components/preview/ArticlePreviewContent'
 import ArticleSeoInspector from '../components/preview/ArticleSeoInspector'
 
 const LANG_TABS = [
-  { code: 'vi' as const, label: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'en' as const, label: 'English', flag: '🇬🇧' },
+  { code: 'vi' as const, label: 'Tiếng Việt' },
+  { code: 'en' as const, label: 'English' },
 ] as const
 
 export default function ArticleDetailPage() {
@@ -119,7 +119,6 @@ export default function ArticleDetailPage() {
                         : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    <span>{tab.flag}</span>
                     <span>{tab.label}</span>
                   </button>
                 ))}
