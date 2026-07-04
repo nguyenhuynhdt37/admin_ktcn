@@ -8,7 +8,8 @@ import {
   MapPin,
   Globe,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  ArrowUpDown
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Checkbox } from '@/shared/components/ui/checkbox'
@@ -80,7 +81,16 @@ export const getDepartmentColumns = ({
   },
   {
     accessorKey: 'name',
-    header: 'Tên bộ môn',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="-ml-4 cursor-pointer"
+      >
+        Tên bộ môn
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const item = row.original
       const enName = item.translations?.en?.name
@@ -179,7 +189,16 @@ export const getDepartmentColumns = ({
   },
   {
     accessorKey: 'sort_order',
-    header: 'Sắp xếp',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="-ml-4 cursor-pointer"
+      >
+        Sắp xếp
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => <span className="font-mono text-xs">{row.original.sort_order}</span>,
   },
   {

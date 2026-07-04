@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuthStore, type User as AuthUser } from '@/stores/authStore'
 import { useTheme } from '@/app/providers/ThemeProvider'
+import { httpClient } from '@/services/http/client'
 import { Button } from '@/shared/components/ui/button'
 import {
   DropdownMenu,
@@ -38,10 +39,12 @@ import {
   Languages,
   BrainCircuit,
   Fingerprint,
+  Tag,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import logoDhVinh from '@/assets/logo-dhvinh.png'
+import { getMediaUrl } from '@/features/articles/utils/media'
 
 // Imports cho phím tắt và Command Palette
 import { useHotkeys } from '@/shared/hooks/useHotkeys'
@@ -98,7 +101,8 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
   }
 
   return (
-    <div className="space-y-1">
+    <div>
+      {/* Parent toggle button */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground text-muted-foreground cursor-pointer bg-transparent border-none outline-hidden"
@@ -109,32 +113,47 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
         </div>
         <ChevronDown
           className={cn(
-            "h-4 w-4 transition-transform duration-200",
-            isOpen ? "transform rotate-180" : ""
+            "h-3.5 w-3.5 transition-transform duration-200 opacity-60",
+            isOpen ? "rotate-180" : ""
           )}
         />
       </button>
-      
+
+      {/* Sub-items */}
       {isOpen && (
-        <div className="pl-5 ml-5 mt-1 border-l border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
-          {item.children.map((child) => (
-            <NavLink
-              key={child.href}
-              to={child.href}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-md px-3.5 py-2.5 text-sm font-medium transition-all hover:bg-accent hover:text-accent-foreground',
-                  isActive
-                    ? 'bg-accent text-accent-foreground font-semibold shadow-2xs'
-                    : 'text-muted-foreground'
-                )
-              }
-            >
-              {child.icon ? <child.icon className="h-4 w-4 shrink-0" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />}
-              {child.label}
-            </NavLink>
-          ))}
+        <div className="mt-0.5 mx-2 mb-1">
+          <div className="relative pl-3 border-l border-border/50">
+            {item.children.map((child) => (
+              <NavLink
+                key={child.href}
+                to={child.href}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    'group relative flex items-center gap-2 rounded-md py-1.5 px-2.5 text-[13px] transition-all duration-150',
+                    isActive
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-muted-foreground font-medium hover:bg-accent hover:text-accent-foreground'
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* Active dot indicator */}
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full transition-all duration-150',
+                        isActive
+                          ? 'w-1.5 h-1.5 bg-primary'
+                          : 'w-1 h-1 bg-muted-foreground/30 group-hover:bg-muted-foreground/60'
+                      )}
+                    />
+                    <span className="truncate">{child.label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -153,6 +172,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { type: 'separator' },
     { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' },
     { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
+    { label: 'Thẻ (Tag)', href: '/tags', icon: Tag, permission: null },
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
     { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
@@ -204,11 +224,15 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
 
       <div className="border-t p-4">
         <div className="flex items-center gap-3 px-2 py-1">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted border">
-            <User className="h-4 w-4 text-muted-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted border overflow-hidden shrink-0">
+            {user?.avatar_url ? (
+              <img src={getMediaUrl(user.avatar_url)} alt={user.full_name} className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-medium text-foreground">{user?.username || 'Administrator'}</p>
+          <div className="flex-1 overflow-hidden text-left">
+            <p className="truncate text-sm font-medium text-foreground">{user?.full_name || user?.username || 'Administrator'}</p>
             <p className="truncate text-xs text-muted-foreground">{user?.email || 'admin@example.com'}</p>
           </div>
         </div>
@@ -228,9 +252,15 @@ export function AdminLayout() {
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
+  const handleLogout = async () => {
+    try {
+      await httpClient.post('/auth/logout')
+    } catch (err) {
+      console.error('Logout failed:', err)
+    } finally {
+      logout()
+      navigate('/login')
+    }
   }
 
   // Khai báo các phím tắt toàn hệ thống
@@ -324,11 +354,15 @@ export function AdminLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-1.5 px-2 hover:bg-muted py-1 h-auto rounded-lg">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted border">
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted border overflow-hidden shrink-0">
+                    {user?.avatar_url ? (
+                      <img src={getMediaUrl(user.avatar_url)} alt={user.full_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
                   </div>
                   <span className="text-sm font-medium hidden sm:inline-block max-w-[100px] truncate">
-                    {user?.username || 'Admin'}
+                    {user?.full_name || user?.username || 'Admin'}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>

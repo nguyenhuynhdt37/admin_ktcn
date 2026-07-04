@@ -354,7 +354,7 @@ export function MenuItemCreatePanel({
             </Label>
             <CategoryTreeSelect
               value={targetId || null}
-              onChange={(id) => setTargetId(id || '')}
+              onChange={(id) => setTargetId(id ?? '')}
             />
           </div>
         )}

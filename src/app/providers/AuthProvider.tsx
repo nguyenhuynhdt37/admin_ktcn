@@ -11,44 +11,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-let activeRefreshPromise: Promise<string> | null = null
-
-const performRefresh = async (): Promise<string> => {
-  if (activeRefreshPromise) {
-    return activeRefreshPromise
-  }
-
-  activeRefreshPromise = (async () => {
-    try {
-      const refreshResponse = await axios.post(
-        `${env.VITE_API_URL}/auth/refresh`,
-        {},
-        { withCredentials: true, timeout: 10000 }
-      )
-      return refreshResponse.data.access_token
-    } finally {
-      activeRefreshPromise = null
-    }
-  })()
-
-  return activeRefreshPromise
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { logout, setUser, setToken, setLoading, isLoading } = useAuthStore()
+  const { logout, login, setLoading, isLoading } = useAuthStore()
   const [init, setInit] = useState(false)
 
   const checkAuth = async () => {
     try {
       setLoading(true)
-      const access_token = await performRefresh()
-      setToken(access_token)
+      // Silent refresh to update/verify cookie session
+      await axios.post(
+        `${env.VITE_API_URL}/auth/refresh`,
+        {},
+        { withCredentials: true, timeout: 10000 }
+      )
 
-      const userResponse = await httpClient.get('/auth/me', {
-        headers: { Authorization: `Bearer ${access_token}` },
-      })
-      
-      setUser(userResponse.data)
+      const userResponse = await httpClient.get('/auth/me')
+      login(userResponse.data, '')
       console.log('Authenticated profile synced successfully')
     } catch (error) {
       console.warn('Session restoration failed:', error)
@@ -64,14 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const runInit = async () => {
       try {
         setLoading(true)
-        const access_token = await performRefresh()
+        // Silent refresh on boot using plain axios to check if active session exists
+        await axios.post(
+          `${env.VITE_API_URL}/auth/refresh`,
+          {},
+          { withCredentials: true, timeout: 10000 }
+        )
 
+        const userResponse = await httpClient.get('/auth/me')
         if (active) {
-          setToken(access_token)
-          const userResponse = await httpClient.get('/auth/me', {
-            headers: { Authorization: `Bearer ${access_token}` },
-          })
-          setUser(userResponse.data)
+          login(userResponse.data, '')
         }
       } catch (error) {
         console.warn('No active session found during boot:', error)

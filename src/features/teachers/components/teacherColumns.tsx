@@ -5,7 +5,8 @@ import {
   MoreHorizontal,
   Phone,
   Globe,
-  Eye
+  Eye,
+  ArrowUpDown
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -59,7 +60,16 @@ export const getTeacherColumns = ({
   },
   {
     accessorKey: 'full_name',
-    header: 'Giảng viên',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="-ml-4 cursor-pointer"
+      >
+        Giảng viên
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const item = row.original
       const initials = item.full_name.trim().split(' ').pop()?.charAt(0).toUpperCase() || 'G'
@@ -189,7 +199,16 @@ export const getTeacherColumns = ({
   },
   {
     accessorKey: 'sort_order',
-    header: 'Sắp xếp',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        className="-ml-4 cursor-pointer"
+      >
+        Sắp xếp
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => <span className="font-mono text-xs">{row.original.sort_order}</span>,
   },
   {

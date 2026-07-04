@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import dayjs from 'dayjs'
+import { useAuthStore } from '@/stores/authStore'
 import { articleService } from '../services/articleService'
 import { SEO_CONFIG } from '../constants'
 import { generateSeoTitle, generateSeoDescription } from '@/shared/utils/seo'
@@ -30,6 +31,7 @@ interface UseArticleFormProps {
 export function useArticleForm({ articleId, showDraftsFeature = true }: UseArticleFormProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
 
   // State quản lý ID bài viết hiện tại (có thể là bài mới đang lưu nháp)
   const [currentArticleId, setCurrentArticleId] = useState<string | null>(articleId || null)
@@ -79,6 +81,53 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   const [enOgDescription, setEnOgDescription] = useState('')
   const [isCheckingEnSlug, setIsCheckingEnSlug] = useState(false)
 
+  // SEO Focus Keywords (chỉ lưu local để phân tích)
+  const [viFocusKeyword, setViFocusKeyword] = useState('')
+  const [enFocusKeyword, setEnFocusKeyword] = useState('')
+
+  // --- HANDLER ĐỒNG BỘ CẤU HÌNH SEO EVENT-DRIVEN ---
+  const handleSetViTitle = (val: string) => {
+    setViTitle(val)
+    if (!isViSeoTitleOverridden) {
+      setViSeoTitle(generateSeoTitle(val))
+    }
+  }
+
+  const handleSetEnTitle = (val: string) => {
+    setEnTitle(val)
+    if (!isEnSeoTitleOverridden) {
+      setEnSeoTitle(generateSeoTitle(val))
+    }
+  }
+
+  const handleSetViExcerpt = (val: string) => {
+    setViExcerpt(val)
+    if (!isViSeoDescriptionOverridden) {
+      setViSeoDescription(generateSeoDescription(viContent, val))
+    }
+  }
+
+  const handleSetViContent = (val: string) => {
+    setViContent(val)
+    if (!isViSeoDescriptionOverridden) {
+      setViSeoDescription(generateSeoDescription(val, viExcerpt))
+    }
+  }
+
+  const handleSetEnExcerpt = (val: string) => {
+    setEnExcerpt(val)
+    if (!isEnSeoDescriptionOverridden) {
+      setEnSeoDescription(generateSeoDescription(enContent, val))
+    }
+  }
+
+  const handleSetEnContent = (val: string) => {
+    setEnContent(val)
+    if (!isEnSeoDescriptionOverridden) {
+      setEnSeoDescription(generateSeoDescription(val, enExcerpt))
+    }
+  }
+
   // --- CẤU HÌNH CHUNG ---
   const [categoryId, setCategoryId] = useState('')
   const [tagIds, setTagIds] = useState<string[]>([])
@@ -87,7 +136,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   const [expireAt, setExpireAt] = useState('')
   const [thumbnailKey, setThumbnailKey] = useState<string | null>(null)
   const [coverKey, setCoverKey] = useState<string | null>(null)
-  const [isFeatured, setIsFeatured] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
 
   // Drafts Modal state & count query
@@ -129,6 +177,14 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   // Sync state with article detail in Edit Mode
   useEffect(() => {
     if (isEditMode && articleDetail) {
+      // Bảo mật phía Frontend: Chặn chỉnh sửa nếu user hiện tại không phải tác giả của bài viết
+      const authorId = articleDetail.author_id || articleDetail.author?.id
+      if (user && authorId && authorId !== user.id) {
+        toast.error('Bạn không có quyền chỉnh sửa bài viết của tác giả khác.')
+        navigate('/articles')
+        return
+      }
+
       // Tiếng Việt
       const vi = articleDetail.translations?.vi || {}
       setViTitle(vi.title || '')
@@ -199,7 +255,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       )
       setThumbnailKey(articleDetail.thumbnail_object_key || null)
       setCoverKey(articleDetail.cover_object_key || null)
-      setIsFeatured(articleDetail.is_featured)
       setIsPinned(articleDetail.is_pinned)
 
       // Lưu giá trị ban đầu sạch để so sánh độ thay đổi (isDirty)
@@ -233,7 +288,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
         expireAt: articleDetail.expire_at ? dayjs(articleDetail.expire_at).format('YYYY-MM-DDTHH:mm') : '',
         thumbnailKey: articleDetail.thumbnail_object_key || null,
         coverKey: articleDetail.cover_object_key || null,
-        isFeatured: articleDetail.is_featured,
         isPinned: articleDetail.is_pinned,
       }
     }
@@ -259,31 +313,7 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     }
   }, [viContent])
 
-  // Auto-sync SEO Title
-  useEffect(() => {
-    if (!isViSeoTitleOverridden) {
-      setViSeoTitle(generateSeoTitle(viTitle))
-    }
-  }, [viTitle, isViSeoTitleOverridden])
 
-  useEffect(() => {
-    if (!isEnSeoTitleOverridden) {
-      setEnSeoTitle(generateSeoTitle(enTitle))
-    }
-  }, [enTitle, isEnSeoTitleOverridden])
-
-  // Auto-sync SEO Description
-  useEffect(() => {
-    if (!isViSeoDescriptionOverridden) {
-      setViSeoDescription(generateSeoDescription(viContent, viExcerpt))
-    }
-  }, [viExcerpt, viContent, isViSeoDescriptionOverridden])
-
-  useEffect(() => {
-    if (!isEnSeoDescriptionOverridden) {
-      setEnSeoDescription(generateSeoDescription(enContent, enExcerpt))
-    }
-  }, [enExcerpt, enContent, isEnSeoDescriptionOverridden])
 
   // Debounce check slug - Tiếng Việt
   useEffect(() => {
@@ -534,7 +564,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       init.expireAt !== expireAt ||
       init.thumbnailKey !== thumbnailKey ||
       init.coverKey !== coverKey ||
-      init.isFeatured !== isFeatured ||
       init.isPinned !== isPinned
     )
   }
@@ -645,7 +674,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       expire_at: formattedExpireAt,
       thumbnail_object_key: thumbnailKey,
       cover_object_key: coverKey,
-      is_featured: isFeatured,
       is_pinned: isPinned,
       translations: {
         vi: {
@@ -735,7 +763,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       expire_at: formattedExpireAt,
       thumbnail_object_key: thumbnailKey,
       cover_object_key: coverKey,
-      is_featured: isFeatured,
       is_pinned: isPinned,
       translations: {
         vi: {
@@ -799,14 +826,19 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     isEnSeoDescriptionOverridden,
     setIsEnSeoDescriptionOverridden,
 
+    viFocusKeyword,
+    setViFocusKeyword,
+    enFocusKeyword,
+    setEnFocusKeyword,
+
     viTitle,
-    setViTitle,
+    setViTitle: handleSetViTitle,
     viSlug,
     setViSlug,
     viExcerpt,
-    setViExcerpt,
+    setViExcerpt: handleSetViExcerpt,
     viContent,
-    setViContent,
+    setViContent: handleSetViContent,
     viSeoTitle,
     setViSeoTitle,
     viSeoDescription,
@@ -822,13 +854,13 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     isCheckingViSlug,
 
     enTitle,
-    setEnTitle,
+    setEnTitle: handleSetEnTitle,
     enSlug,
     setEnSlug,
     enExcerpt,
-    setEnExcerpt,
+    setEnExcerpt: handleSetEnExcerpt,
     enContent,
-    setEnContent,
+    setEnContent: handleSetEnContent,
     enSeoTitle,
     setEnSeoTitle,
     enSeoDescription,
@@ -857,8 +889,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     setThumbnailKey,
     coverKey,
     setCoverKey,
-    isFeatured,
-    setIsFeatured,
     isPinned,
     setIsPinned,
 

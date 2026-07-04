@@ -10,7 +10,15 @@ import type {
   BulkStatusResponse,
   ArticleCreatePayload,
   Article,
-  TagTranslation
+  TagTranslation,
+  SeoAnalyzePayload,
+  SeoAnalysisResponse,
+  ArticleSEORewriteRequest,
+  ArticleSEORewriteResponse,
+  ArticleGenerateByIdeaRequest,
+  ArticleGenerateByIdeaResponse,
+  ArticleSummaryRequest,
+  ArticleSummaryResponse
 } from '../types/articles.types'
 
 export const articleService = {
@@ -96,19 +104,21 @@ export const articleService = {
     return data
   },
 
-  updateAttributes: async (id: string, payload: { is_featured?: boolean; is_pinned?: boolean }): Promise<Article> => {
+  updateAttributes: async (id: string, payload: { is_pinned?: boolean }): Promise<Article> => {
     const { data } = await httpClient.patch<Article>(`/admin/articles/${id}/attributes`, payload)
     return data
   },
 
   listCategories: async (): Promise<CategorySearchItem[]> => {
-    const { data } = await httpClient.get<CategorySearchItem[]>('/admin/categories')
+    const { data } = await httpClient.get<CategorySearchItem[]>('/admin/categories', {
+      params: { status: 'ACTIVE' }
+    })
     return data
   },
 
   listTags: async (): Promise<TagSearchItem[]> => {
     const { data } = await httpClient.get<{ items: TagSearchItem[] } | TagSearchItem[]>('/admin/tags', {
-      params: { limit: 100 },
+      params: { limit: 100, is_active: true },
     })
     if (Array.isArray(data)) {
       return data
@@ -134,7 +144,7 @@ export const articleService = {
   uploadMedia: async (file: File): Promise<{ id?: string; object_key: string }> => {
     const formData = new FormData()
     formData.append('file', file)
-    const { data } = await httpClient.post<{ id?: string; object_key: string }>('/media/upload', formData, {
+    const { data } = await httpClient.post<{ id?: string; object_key: string }>('/admin/media/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -169,6 +179,34 @@ export const articleService = {
 
   countMyDrafts: async (): Promise<{ count: number }> => {
     const { data } = await httpClient.get<{ count: number }>('/admin/articles/drafts/count')
+    return data
+  },
+
+  analyzeSeo: async (articleId: string, payload: SeoAnalyzePayload): Promise<SeoAnalysisResponse> => {
+    const { data } = await httpClient.post<SeoAnalysisResponse>(`/admin/articles/${articleId}/seo/analyze`, payload, {
+      timeout: 30000 // Tăng timeout lên 30 giây cho phân tích SEO
+    })
+    return data
+  },
+
+  seoRewrite: async (articleId: string, payload: ArticleSEORewriteRequest): Promise<ArticleSEORewriteResponse> => {
+    const { data } = await httpClient.post<ArticleSEORewriteResponse>(`/admin/articles/${articleId}/seo/rewrite`, payload, {
+      timeout: 60000 // Tăng timeout lên 60 giây cho viết lại nội dung bằng AI
+    })
+    return data
+  },
+
+  generateByIdea: async (payload: ArticleGenerateByIdeaRequest): Promise<ArticleGenerateByIdeaResponse> => {
+    const { data } = await httpClient.post<ArticleGenerateByIdeaResponse>('/admin/articles/seo/generate-by-idea', payload, {
+      timeout: 60000 // Tăng timeout lên 60 giây cho sinh bài viết bằng AI
+    })
+    return data
+  },
+
+  seoSummarize: async (articleId: string, payload: ArticleSummaryRequest): Promise<ArticleSummaryResponse> => {
+    const { data } = await httpClient.post<ArticleSummaryResponse>(`/admin/articles/${articleId}/seo/summarize`, payload, {
+      timeout: 30000 // Tăng timeout lên 30 giây cho tóm tắt bài viết bằng AI
+    })
     return data
   },
 }

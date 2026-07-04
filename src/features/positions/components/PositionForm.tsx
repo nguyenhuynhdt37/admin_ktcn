@@ -278,8 +278,8 @@ export function PositionForm({
               {/* Tabs Selector */}
               <div className="flex border bg-muted/20 rounded-lg p-1 gap-1">
                 {[
-                  { code: 'vi' as const, label: 'Tiếng Việt', flag: '🇻🇳' },
-                  { code: 'en' as const, label: 'Tiếng Anh', flag: '🇬🇧' },
+                  { code: 'vi' as const, label: 'Tiếng Việt' },
+                  { code: 'en' as const, label: 'Tiếng Anh' },
                 ].map((tab) => {
                   const nameVal = form.watch(`translations.${tab.code}.name`)
                   const isTabDone = !!nameVal?.trim()
@@ -295,7 +295,6 @@ export function PositionForm({
                           : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                       )}
                     >
-                      <span>{tab.flag}</span>
                       <span>{tab.label}</span>
                       {!isTabDone && (
                         <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse absolute -top-0.5 -right-0.5" />

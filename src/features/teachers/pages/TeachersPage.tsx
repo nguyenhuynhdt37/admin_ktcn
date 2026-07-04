@@ -35,31 +35,153 @@ import { getTeacherColumns } from '../components/teacherColumns'
 import { departmentService } from '@/features/departments/services/departmentService'
 import { positionService } from '@/features/positions/services/positionService'
 
+import { useSearchParams } from 'react-router'
+import { useEffect } from 'react'
+
 export function TeachersPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+
+  // Table states (URL Search Params)
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const pageParam = Number(searchParams.get('page'))
+  const pageIndex = (pageParam && pageParam > 0) ? pageParam - 1 : 0
+  const pageSize = Number(searchParams.get('page_size')) || 10
+  const sortBy = searchParams.get('sort_by') || 'sort_order'
+  const sortDir = searchParams.get('sort_dir') || 'asc'
   
+  const selectedDeptId = searchParams.get('department_id') || ''
+  const selectedPosId = searchParams.get('position_id') || 'all'
+  const selectedTitle = searchParams.get('academic_title_id') || 'all'
+  const selectedDegree = searchParams.get('degree_id') || 'all'
+  const selectedStatus = (searchParams.get('is_active') === 'true' ? 'active' : searchParams.get('is_active') === 'false' ? 'inactive' : 'all') as 'all' | 'active' | 'inactive'
+  const urlSearch = searchParams.get('search') || ''
+
+  // Chuẩn hóa trang nếu URL chứa page=0 hoặc nhỏ hơn 1
+  useEffect(() => {
+    const pParam = searchParams.get('page')
+    if (pParam !== null) {
+      const pageNum = Number(pParam)
+      if (isNaN(pageNum) || pageNum < 1) {
+        const params = new URLSearchParams(searchParams)
+        params.set('page', '1')
+        setSearchParams(params)
+      }
+    }
+  }, [searchParams, setSearchParams])
+
   // Filtering & Pagination states
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(urlSearch)
   const debouncedSearchQuery = useDebounce(searchInput, 500)
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('')
-  const [selectedPosId, setSelectedPosId] = useState<string>('all')
-  const [selectedTitle, setSelectedTitle] = useState<string>('all')
-  const [selectedDegree, setSelectedDegree] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all')
 
   // UI states
   const [deleteTarget, setDeleteTarget] = useState<{ ids: string[] } | null>(null)
 
-  // Table states
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'sort_order', desc: false }
-  ])
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  })
+  // Đồng bộ search term từ ô input lên URL sau khi debounced
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (debouncedSearchQuery.trim()) {
+      params.set('search', debouncedSearchQuery.trim())
+    } else {
+      params.delete('search')
+    }
+    params.set('page', '1') // reset trang khi tìm kiếm
+    setSearchParams(params)
+  }, [debouncedSearchQuery])
+
+  // Custom setters để đồng bộ filter lên URL
+  const handleDeptFilterChange = useCallback((val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val) {
+      params.set('department_id', val)
+    } else {
+      params.delete('department_id')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const handlePosFilterChange = useCallback((val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val !== 'all') {
+      params.set('position_id', val)
+    } else {
+      params.delete('position_id')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const handleTitleFilterChange = useCallback((val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val !== 'all') {
+      params.set('academic_title_id', val)
+    } else {
+      params.delete('academic_title_id')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const handleDegreeFilterChange = useCallback((val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val !== 'all') {
+      params.set('degree_id', val)
+    } else {
+      params.delete('degree_id')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const handleStatusFilterChange = useCallback((val: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (val === 'active') {
+      params.set('is_active', 'true')
+    } else if (val === 'inactive') {
+      params.set('is_active', 'false')
+    } else {
+      params.delete('is_active')
+    }
+    params.set('page', '1')
+    setSearchParams(params)
+  }, [searchParams, setSearchParams])
+
+  const pagination = useMemo<PaginationState>(() => ({
+    pageIndex,
+    pageSize,
+  }), [pageIndex, pageSize])
+
+  const sorting = useMemo<SortingState>(() => [{
+    id: sortBy,
+    desc: sortDir === 'desc',
+  }], [sortBy, sortDir])
+
+  const setPagination = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    if (typeof value === 'function') {
+      const next = value({ pageIndex, pageSize })
+      params.set('page', String(next.pageIndex + 1))
+      params.set('page_size', String(next.pageSize))
+    } else {
+      params.set('page', String(value.pageIndex + 1))
+      params.set('page_size', String(value.pageSize))
+    }
+    setSearchParams(params)
+  }, [pageIndex, pageSize, searchParams, setSearchParams])
+
+  const setSorting = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    const nextSorting = typeof value === 'function' ? value(sorting) : value
+    if (nextSorting.length > 0) {
+      params.set('sort_by', nextSorting[0].id)
+      params.set('sort_dir', nextSorting[0].desc ? 'desc' : 'asc')
+      params.set('page', '1')
+    }
+    setSearchParams(params)
+  }, [sorting, searchParams, setSearchParams])
 
   // 1. Fetch departments to populate Filter Select
   const { data: departmentData } = useQuery({
@@ -91,17 +213,17 @@ export function TeachersPage() {
 
   // 3. Query: Fetch staff list (Server-side paginated & filtered)
   const listParams = useMemo(() => ({
-    page: pagination.pageIndex + 1,
-    page_size: pagination.pageSize,
+    page: pageIndex + 1,
+    page_size: pageSize,
     search: debouncedSearchQuery.trim() || null,
     department_id: activeDeptId === 'all' || activeDeptId === '' ? null : activeDeptId,
     position_id: selectedPosId === 'all' ? null : selectedPosId,
     academic_title_id: selectedTitle === 'all' ? null : selectedTitle,
     degree_id: selectedDegree === 'all' ? null : selectedDegree,
     is_active: selectedStatus === 'all' ? null : selectedStatus === 'active',
-    sort_by: sorting[0]?.id as 'full_name' | 'sort_order' | 'created_at' || 'sort_order',
-    order: sorting[0]?.desc ? 'desc' as const : 'asc' as const,
-  }), [pagination, debouncedSearchQuery, activeDeptId, selectedPosId, selectedTitle, selectedDegree, selectedStatus, sorting])
+    sort_by: sortBy as 'full_name' | 'sort_order' | 'created_at',
+    order: sortDir as 'asc' | 'desc',
+  }), [pageIndex, pageSize, debouncedSearchQuery, activeDeptId, selectedPosId, selectedTitle, selectedDegree, selectedStatus, sortBy, sortDir])
 
   const {
     data: staffData = { items: [], total_items: 0, total_pages: 1 },
@@ -334,7 +456,6 @@ export function TeachersPage() {
               value={searchInput}
               onChange={(e) => {
                 setSearchInput(e.target.value)
-                setPagination((p) => ({ ...p, pageIndex: 0 }))
               }}
               className="pl-8 text-xs h-9 bg-background focus-visible:ring-primary/20"
             />
@@ -348,10 +469,7 @@ export function TeachersPage() {
           <SearchableSelect
             options={deptOptions}
             value={activeDeptId}
-            onValueChange={(val) => {
-              setSelectedDeptId(val)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
+            onValueChange={handleDeptFilterChange}
             placeholder="Chọn bộ môn"
             emptyMessage="Không tìm thấy bộ môn."
           />
@@ -363,10 +481,7 @@ export function TeachersPage() {
           <SearchableSelect
             options={posOptions}
             value={selectedPosId}
-            onValueChange={(val) => {
-              setSelectedPosId(val)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
+            onValueChange={handlePosFilterChange}
             placeholder="Chọn chức vụ"
             emptyMessage="Không tìm thấy chức vụ."
           />
@@ -377,10 +492,7 @@ export function TeachersPage() {
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Học hàm</label>
           <Select
             value={selectedTitle}
-            onValueChange={(val) => {
-              setSelectedTitle(val)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
+            onValueChange={handleTitleFilterChange}
           >
             <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
               <SelectValue placeholder="Chọn học hàm" />
@@ -401,10 +513,7 @@ export function TeachersPage() {
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Học vị</label>
           <Select
             value={selectedDegree}
-            onValueChange={(val) => {
-              setSelectedDegree(val)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
+            onValueChange={handleDegreeFilterChange}
           >
             <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
               <SelectValue placeholder="Chọn học vị" />

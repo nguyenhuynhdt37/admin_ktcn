@@ -58,6 +58,11 @@ import { languageService } from '../services/languageService'
 import { SortableTableRow } from '../components/SortableTableRow'
 import type { Language } from '../types'
 
+const FLAG_MAP: Record<string, string> = {
+  vi: '🇻🇳',
+  en: '🇬🇧',
+}
+
 export function LanguagesPage() {
   const queryClient = useQueryClient()
 
@@ -72,11 +77,7 @@ export function LanguagesPage() {
 
   // Cấu hình các cảm biến kéo thả dnd-kit
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 4, // Bắt đầu kéo sau khi di chuyển chuột 4px
-      },
-    }),
+    useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -158,25 +159,26 @@ export function LanguagesPage() {
   // Xử lý sự kiện kéo thả kết thúc
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id) return
 
-    setLocalLanguages((prev) => {
-      const oldIndex = prev.findIndex((item) => item.id === active.id)
-      const newIndex = prev.findIndex((item) => item.id === over.id)
+    if (over && active.id !== over.id) {
+      setLocalLanguages((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
 
-      const newList = arrayMove(prev, oldIndex, newIndex)
+        const newItems = arrayMove(items, oldIndex, newIndex)
 
-      // Tạo payload reorder chứa ID và sort_order mới
-      const payload = newList.map((item, index) => ({
-        id: item.id,
-        sort_order: index * 10,
-      }))
+        // Tính toán sort_order mới dựa trên vị trí sau khi kéo thả
+        const payload = newItems.map((item, index) => ({
+          id: item.id,
+          sort_order: (index + 1) * 100, // Đánh số lại thứ tự cách nhau 100
+        }))
 
-      // Gửi yêu cầu reorder xuống DB
-      reorderMutation.mutate(payload)
+        // Gọi API cập nhật
+        reorderMutation.mutate(payload)
 
-      return newList
-    })
+        return newItems
+      })
+    }
   }
 
   // Hàm mở Dialog xác nhận đổi mặc định
@@ -187,58 +189,50 @@ export function LanguagesPage() {
 
   // Xử lý xác nhận đổi ngôn ngữ mặc định
   const handleConfirmDefault = () => {
-    if (!pendingLanguage) return
-    setDefaultMutation.mutate(pendingLanguage.id)
+    if (pendingLanguage) {
+      setDefaultMutation.mutate(pendingLanguage.id)
+    }
     setConfirmOpen(false)
-    setPendingLanguage(null)
+  }
+
+  if (isLoading && localLanguages.length === 0) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Đang tải danh sách ngôn ngữ...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (isError && localLanguages.length === 0) {
+    return (
+      <div className="flex h-[400px] flex-col items-center justify-center gap-4">
+        <div className="flex items-center gap-2 text-destructive">
+          <AlertTriangle className="h-6 w-6" />
+          <span className="font-semibold">Đã có lỗi xảy ra khi tải dữ liệu!</span>
+        </div>
+        <Button onClick={() => refetch()} variant="outline">
+          Thử lại
+        </Button>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header trang */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Title */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary" />
-            Cấu hình ngôn ngữ
-          </h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Sắp xếp thứ tự hiển thị bằng cách kéo thả và cấu hình ngôn ngữ mặc định hệ thống.
+          <h1 className="text-2xl font-bold tracking-tight">Ngôn ngữ hệ thống</h1>
+          <p className="text-sm text-muted-foreground">
+            Quản lý và kích hoạt các ngôn ngữ hỗ trợ nội dung trên website.
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {reorderMutation.isPending && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse bg-muted/50 px-2.5 py-1.5 rounded-md border">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-              <span>Đang lưu thứ tự...</span>
-            </div>
-          )}
         </div>
       </div>
 
-
-
-      {isLoading ? (
-        <div className="flex h-64 flex-col items-center justify-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">
-            Đang tải danh sách ngôn ngữ...
-          </p>
-        </div>
-      ) : isError ? (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-            <AlertTriangle className="h-10 w-10 text-destructive mb-3" />
-            <h3 className="font-semibold text-lg text-destructive">Lỗi tải dữ liệu</h3>
-            <p className="text-muted-foreground text-sm max-w-sm mt-1">
-              Không thể kết nối đến máy chủ để lấy danh sách ngôn ngữ. Vui lòng kiểm tra lại kết nối mạng.
-            </p>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4 flex items-center gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5" /> Thử lại
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
+      {localLanguages.length > 0 && (
         <Card className="border shadow-xs overflow-hidden">
           <DndContext
             sensors={sensors}
@@ -279,18 +273,10 @@ export function LanguagesPage() {
                           isDragDisabled={false}
                         >
                           {/* Quốc kỳ */}
-                          <TableCell className="align-middle">
-                            <div className="h-6 w-10 rounded border overflow-hidden bg-muted flex items-center justify-center shadow-2xs">
-                              {lang.flag_url ? (
-                                <img
-                                  src={lang.flag_url}
-                                  alt={`${lang.name} Flag`}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <Globe className="h-3.5 w-3.5 text-muted-foreground/30" />
-                              )}
-                            </div>
+                          <TableCell className="align-middle text-center">
+                            <span className="text-xl select-none" role="img" aria-label={`${lang.name} Flag`}>
+                              {FLAG_MAP[lang.code.toLowerCase()] || '🏳️'}
+                            </span>
                           </TableCell>
 
                           {/* Tên ngôn ngữ */}

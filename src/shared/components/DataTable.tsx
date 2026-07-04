@@ -18,6 +18,7 @@ import {
 } from '@/shared/components/ui/table'
 
 import { Button } from '@/shared/components/ui/button'
+import { Input } from '@/shared/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
@@ -55,10 +56,11 @@ export function DataTable<TData, TValue>({
   onPageSizeChange,
 }: DataTableProps<TData, TValue>) {
   const [internalSorting, setInternalSorting] = useState<SortingState>([])
+  const [goToPageValue, setGoToPageValue] = useState('')
 
   const isServerSide = pageCount !== undefined && pageIndex !== undefined && onPageChange !== undefined
   const isServerSort = sorting !== undefined && onSortingChange !== undefined
-  
+
   const currentSorting = isServerSort ? sorting : internalSorting
   const handleSortingChange = isServerSort ? onSortingChange : setInternalSorting
 
@@ -76,9 +78,7 @@ export function DataTable<TData, TValue>({
       ...(rowSelection !== undefined && { rowSelection }),
     },
     initialState: {
-      pagination: {
-        pageSize,
-      },
+      pagination: { pageSize },
     },
     manualPagination: isServerSide,
     pageCount: pageCount,
@@ -91,6 +91,20 @@ export function DataTable<TData, TValue>({
   const canPrevious = isServerSide ? pageIndex > 0 : table.getCanPreviousPage()
   const canNext = isServerSide ? pageIndex < totalPages - 1 : table.getCanNextPage()
 
+  // Nhảy đến trang cụ thể
+  const handleGoToPage = () => {
+    const page = parseInt(goToPageValue, 10)
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      const targetIndex = page - 1
+      if (isServerSide) {
+        onPageChange(targetIndex)
+      } else {
+        table.setPageIndex(targetIndex)
+      }
+    }
+    setGoToPageValue('')
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-md border bg-card">
@@ -98,18 +112,13 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id} className="font-semibold text-muted-foreground">
-                      {header.isPlaceholder
-                         ? null
-                         : flexRender(
-                             header.column.columnDef.header,
-                             header.getContext()
-                           )}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="font-semibold text-muted-foreground">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -140,35 +149,40 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
-        <div className="flex-1 text-sm text-muted-foreground whitespace-nowrap">
+      {/* Pagination Footer */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-1">
+        {/* Thông tin bản ghi */}
+        <div className="text-sm text-muted-foreground whitespace-nowrap">
           Hiển thị{' '}
-          <span className="font-medium">
+          <span className="font-semibold text-foreground">
             {recordsTotal === 0 ? 0 : currentPage * pageSize + 1}
           </span>{' '}
-          đến{' '}
-          <span className="font-medium">
-            {Math.min(
-              (currentPage + 1) * pageSize,
-              recordsTotal
-            )}
+          –{' '}
+          <span className="font-semibold text-foreground">
+            {Math.min((currentPage + 1) * pageSize, recordsTotal)}
           </span>{' '}
-          trong tổng số <span className="font-medium">{recordsTotal}</span> bản ghi
+          trong{' '}
+          <span className="font-semibold text-foreground">{recordsTotal}</span> bản ghi
           {table.getFilteredSelectedRowModel().rows.length > 0 && (
             <span className="ml-2 font-medium text-primary">
-              (Đã chọn {table.getFilteredSelectedRowModel().rows.length})
+              · Đã chọn {table.getFilteredSelectedRowModel().rows.length}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 overflow-x-auto pb-1 sm:pb-0">
+
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Số dòng mỗi trang */}
           {onPageSizeChange && (
-            <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium whitespace-nowrap">Số dòng</p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                Dòng/trang
+              </span>
               <Select
                 value={`${pageSize}`}
                 onValueChange={(value) => onPageSizeChange(Number(value))}
               >
-                <SelectTrigger className="h-8 w-[70px]">
+                <SelectTrigger className="h-9 w-[80px]">
                   <SelectValue placeholder={pageSize} />
                 </SelectTrigger>
                 <SelectContent side="top">
@@ -181,51 +195,99 @@ export function DataTable<TData, TValue>({
               </Select>
             </div>
           )}
-          
-          <div className="flex items-center space-x-2 shrink-0">
+
+          {/* Nút điều hướng trang */}
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
+              size="sm"
+              className="h-9 w-9 p-0"
               onClick={() => (isServerSide ? onPageChange(0) : table.setPageIndex(0))}
               disabled={!canPrevious}
               aria-label="Trang đầu"
+              title="Trang đầu"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
+              size="sm"
+              className="h-9 w-9 p-0"
               onClick={() => (isServerSide ? onPageChange(pageIndex - 1) : table.previousPage())}
               disabled={!canPrevious}
               aria-label="Trang trước"
+              title="Trang trước"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="flex items-center justify-center text-sm font-medium min-w-[100px]">
-              Trang {currentPage + 1} / {totalPages || 1}
+
+            {/* Trang hiện tại / Tổng trang */}
+            <div className="flex items-center gap-1 px-2 min-w-fit">
+              <span className="text-sm text-muted-foreground">Trang</span>
+              <span className="text-sm font-semibold text-foreground tabular-nums">
+                {currentPage + 1}
+              </span>
+              <span className="text-sm text-muted-foreground">/</span>
+              <span className="text-sm font-semibold text-foreground tabular-nums">
+                {totalPages || 1}
+              </span>
             </div>
+
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
+              size="sm"
+              className="h-9 w-9 p-0"
               onClick={() => (isServerSide ? onPageChange(pageIndex + 1) : table.nextPage())}
               disabled={!canNext}
               aria-label="Trang sau"
+              title="Trang sau"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => (isServerSide ? onPageChange(totalPages - 1) : table.setPageIndex(totalPages - 1))}
+              size="sm"
+              className="h-9 w-9 p-0"
+              onClick={() =>
+                isServerSide
+                  ? onPageChange(totalPages - 1)
+                  : table.setPageIndex(totalPages - 1)
+              }
               disabled={!canNext}
               aria-label="Trang cuối"
+              title="Trang cuối"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Nhảy đến trang — chỉ hiện khi có nhiều trang */}
+          {totalPages > 5 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Đến trang</span>
+              <Input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={goToPageValue}
+                onChange={(e) => setGoToPageValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleGoToPage()}
+                className="h-9 w-[60px] text-center text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                placeholder="—"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-sm font-medium"
+                onClick={handleGoToPage}
+                disabled={!goToPageValue}
+              >
+                Đi
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
-

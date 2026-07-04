@@ -30,7 +30,7 @@ export const usersService = {
   uploadAvatar: async (file: File): Promise<{ id: string; name: string }> => {
     const formData = new FormData()
     formData.append('file', file)
-    const { data } = await httpClient.post<{ id: string; name: string }>('/media/upload', formData, {
+    const { data } = await httpClient.post<{ id: string; name: string }>('/admin/media/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -39,7 +39,7 @@ export const usersService = {
   },
 
   getMediaUrl: async (mediaId: string): Promise<string> => {
-    const { data } = await httpClient.get<{ url: string }>(`/media/${mediaId}/url`)
+    const { data } = await httpClient.get<{ url: string }>(`/admin/media/${mediaId}/url`)
     return data.url
   },
 

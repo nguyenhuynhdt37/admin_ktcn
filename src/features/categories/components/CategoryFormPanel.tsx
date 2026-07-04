@@ -165,8 +165,8 @@ export function CategoryFormPanel({
           {/* Tabs Selector đa ngôn ngữ thiết kế CMS */}
           <div className="flex border-b border-border bg-muted/20 rounded-lg p-1 gap-1">
             {[
-              { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-              { code: 'en', label: 'Tiếng Anh', flag: '🇬🇧' },
+              { code: 'vi', label: 'Tiếng Việt' },
+              { code: 'en', label: 'Tiếng Anh' },
             ].map((tab) => {
               const isTabDone = isTabComplete(tab.code as any)
               return (
@@ -181,7 +181,6 @@ export function CategoryFormPanel({
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                   )}
                 >
-                  <span>{tab.flag}</span>
                   <span>{tab.label}</span>
                   {/* Chấm đỏ báo lỗi/cảnh báo thiếu trường trực quan */}
                   {!isTabDone && (

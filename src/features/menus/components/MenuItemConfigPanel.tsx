@@ -323,7 +323,7 @@ function MenuItemConfigForm({
             </Label>
             <CategoryTreeSelect
               value={targetId || null}
-              onChange={setTargetId}
+              onChange={(id) => setTargetId(id ?? '')}
               disabled={!canUpdate}
             />
           </div>
@@ -464,10 +464,14 @@ export function ArticleSelect({
 }: ArticleSelectProps) {
   const [open, setOpen] = useState(false)
 
-  // Tìm bài viết đang chọn trong danh sách hiển thị
   const selectedArticle = useMemo(() => {
-    return articlesList.find((art) => art.id === value)
+    return articlesList.find((art) => art.id === value) ?? null
   }, [articlesList, value])
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onValueChange('')
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -477,51 +481,84 @@ export function ArticleSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="w-full justify-between text-xs h-10 font-normal bg-background px-3 hover:bg-background/80 focus:ring-1 focus:ring-primary/20 cursor-pointer"
+          className="w-full h-auto min-h-10 justify-between font-normal bg-background px-3 py-2 hover:bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/30"
         >
-          <span className="truncate flex-1 text-left font-medium text-slate-700 dark:text-slate-300">
-            {selectedArticle ? selectedArticle.title : 'Chọn bài viết liên kết...'}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {selectedArticle ? (
+            <div className="flex flex-col items-start gap-0.5 flex-1 min-w-0 text-left">
+              <span className="text-[13px] font-medium text-foreground line-clamp-2 leading-snug">
+                {selectedArticle.translations?.vi?.title || selectedArticle.translations?.en?.title || selectedArticle.title || '(Chưa có tiêu đề)'}
+              </span>
+              <span className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-1.5">
+                {selectedArticle.category?.name && (
+                  <span className="bg-muted px-1.5 py-0.5 rounded-[4px] text-[10px] font-medium">{selectedArticle.category.name}</span>
+                )}
+                {selectedArticle.view_count != null && (
+                  <span>{selectedArticle.view_count.toLocaleString()} lượt xem</span>
+                )}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[13px] text-muted-foreground flex-1 text-left">Chọn bài viết liên kết...</span>
+          )}
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            {selectedArticle && !disabled && (
+              <span
+                role="button"
+                onClick={handleClear}
+                className="h-5 w-5 flex items-center justify-center rounded-full hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3 text-muted-foreground" />
+              </span>
+            )}
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />
+          </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-50" align="start">
-        <div className="flex flex-col max-h-[340px] overflow-hidden bg-popover text-popover-foreground rounded-lg border shadow-lg">
-          {/* Hộp Tìm kiếm hợp nhất */}
-          <div className="flex items-center border-b px-3 py-2.5 gap-2 bg-slate-50/50 dark:bg-slate-900/50">
-            <Search className="h-4 w-4 shrink-0 opacity-50 text-muted-foreground" />
+
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-50 shadow-xl" align="start" sideOffset={4}>
+        <div className="flex flex-col max-h-[380px] overflow-hidden rounded-lg border bg-popover">
+          {/* Search bar */}
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-muted/30">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
             <input
-              placeholder="Nhập từ khóa tìm bài viết..."
+              placeholder="Tìm tiêu đề bài viết..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               disabled={disabled}
-              className="flex-1 bg-transparent text-xs outline-none border-none py-0.5 placeholder:text-muted-foreground/70"
+              className="flex-1 bg-transparent text-[13px] outline-none border-none py-0.5 placeholder:text-muted-foreground/50"
               autoFocus
             />
-            {isLoading && (
+            {isLoading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
-            )}
+            ) : searchTerm ? (
+              <button
+                onClick={() => onSearchChange('')}
+                className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : null}
           </div>
 
-          {/* Danh sách bài viết chi tiết */}
-          <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+          {/* Article list */}
+          <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
             {articlesList.length === 0 ? (
-              <div className="text-center py-8 text-xs text-muted-foreground">
-                {isLoading ? 'Đang tìm kiếm bài viết...' : 'Không tìm thấy bài viết nào.'}
+              <div className="text-center py-10 text-[13px] text-muted-foreground">
+                {isLoading ? 'Đang tìm kiếm...' : 'Không tìm thấy bài viết nào.'}
               </div>
             ) : (
               articlesList.map((art) => {
                 const isSelected = art.id === value
-                
-                // Định dạng ngày tạo hiển thị
-                let dateStr = ''
-                if (art.created_at) {
-                  try {
-                    dateStr = new Date(art.created_at).toLocaleDateString('vi-VN')
-                  } catch {
-                    // ignore
-                  }
+                const publishedDate = art.published_at
+                  ? new Date(art.published_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  : null
+
+                const statusLabel: Record<string, { label: string; color: string }> = {
+                  PUBLISHED: { label: 'Đã đăng', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+                  SCHEDULED: { label: 'Lên lịch', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+                  ARCHIVED: { label: 'Lưu trữ', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' },
                 }
+                const statusInfo = statusLabel[art.status]
 
                 return (
                   <button
@@ -532,32 +569,40 @@ export function ArticleSelect({
                       setOpen(false)
                     }}
                     className={cn(
-                      "w-full text-left p-2.5 rounded-md transition-colors text-xs flex flex-col gap-1.5 cursor-pointer border border-transparent",
-                      isSelected 
-                        ? "bg-primary/10 text-primary font-medium border-primary/20" 
-                        : "hover:bg-muted/80 text-foreground"
+                      'w-full text-left px-2.5 py-2 rounded-md transition-colors cursor-pointer border border-transparent flex flex-col gap-1.5',
+                      isSelected
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'hover:bg-muted text-foreground'
                     )}
                   >
-                    {/* Tiêu đề in đậm, cho phép ngắt 2 dòng */}
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="font-semibold leading-relaxed break-words line-clamp-2 flex-1 text-slate-800 dark:text-slate-200">
-                        {art.title}
+                    {/* Title row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className={cn('text-[13px] font-medium leading-snug line-clamp-2 flex-1', isSelected ? 'text-primary-foreground' : 'text-foreground')}>
+                        {art.translations?.vi?.title || art.translations?.en?.title || art.title || '(Chưa có tiêu đề)'}
                       </span>
-                      {isSelected && <Check className="h-4 w-4 shrink-0 text-primary mt-0.5" />}
+                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-primary-foreground mt-0.5" />}
                     </div>
 
-                    {/* Metadata Card: Badge Danh mục, ngày tạo và tác giả */}
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground/90">
+                    {/* Meta row */}
+                    <div className={cn('flex flex-wrap items-center gap-1.5 text-[11px]', isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                      {statusInfo && (
+                        <span className={cn('px-1.5 py-0.5 rounded-[4px] font-medium text-[10px]', isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : statusInfo.color)}>
+                          {statusInfo.label}
+                        </span>
+                      )}
                       {art.category?.name && (
-                        <span className="bg-slate-100 dark:bg-slate-800 dark:text-slate-300 text-slate-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold border border-slate-200/40 dark:border-slate-700/40">
+                        <span className={cn('px-1.5 py-0.5 rounded-[4px] font-medium text-[10px]', isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground')}>
                           {art.category.name}
                         </span>
                       )}
-                      {dateStr && (
-                        <span className="font-mono text-[9px]">Tạo: {dateStr}</span>
+                      {art.view_count != null && (
+                        <span className="flex items-center gap-0.5">
+                          {art.view_count.toLocaleString()} lượt xem
+                        </span>
                       )}
+                      {publishedDate && <span>{publishedDate}</span>}
                       {art.author?.full_name && (
-                        <span className="truncate max-w-[90px] italic">bởi {art.author.full_name}</span>
+                        <span className="truncate max-w-[100px]">{art.author.full_name}</span>
                       )}
                     </div>
                   </button>
@@ -565,13 +610,23 @@ export function ArticleSelect({
               })
             )}
           </div>
+
+          {/* Footer */}
+          {!isLoading && articlesList.length > 0 && (
+            <div className="border-t px-3 py-2 bg-muted/20">
+              <p className="text-[11px] text-muted-foreground/60">
+                {articlesList.length} bài viết · Click để chọn
+              </p>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
   )
 }
 
-// Component Select bộ môn có ô tìm kiếm hợp nhất và hiển thị mã bộ môn
+// ─── DepartmentSelect ─────────────────────────────────────────────────────────
+
 interface DepartmentSelectProps {
   value: string
   onValueChange: (value: string) => void
@@ -588,21 +643,25 @@ export function DepartmentSelect({
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Tìm bộ môn đang chọn trong danh sách hiển thị
   const selectedDept = useMemo(() => {
-    return departmentsList.find((dept) => dept.id === value)
+    return departmentsList.find((dept) => dept.id === value) ?? null
   }, [departmentsList, value])
 
-  // Lọc bộ môn theo từ khóa tìm kiếm (local filter)
   const filteredDepts = useMemo(() => {
     if (!searchTerm.trim()) return departmentsList
     const term = searchTerm.toLowerCase()
     return departmentsList.filter(
       (dept) =>
         (dept.name && dept.name.toLowerCase().includes(term)) ||
-        (dept.code && dept.code.toLowerCase().includes(term))
+        (dept.code && dept.code.toLowerCase().includes(term)) ||
+        (dept.email && dept.email.toLowerCase().includes(term))
     )
   }, [departmentsList, searchTerm])
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onValueChange('')
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -612,38 +671,73 @@ export function DepartmentSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="w-full justify-between text-xs h-10 font-normal bg-background px-3 hover:bg-background/80 focus:ring-1 focus:ring-primary/20 cursor-pointer"
+          className="w-full h-auto min-h-10 justify-between font-normal bg-background px-3 py-2 hover:bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/30"
         >
-          <span className="truncate flex-1 text-left font-medium text-slate-700 dark:text-slate-300">
-            {selectedDept ? selectedDept.name : 'Chọn bộ môn liên kết...'}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {selectedDept ? (
+            <div className="flex flex-col items-start gap-0.5 flex-1 min-w-0 text-left">
+              <span className="text-[13px] font-medium text-foreground truncate w-full">
+                {selectedDept.name}
+              </span>
+              <span className="text-[11px] text-muted-foreground flex items-center gap-2">
+                {selectedDept.staff_count != null && (
+                  <span>{selectedDept.staff_count} giảng viên</span>
+                )}
+                {selectedDept.email && (
+                  <span className="truncate max-w-[140px]">{selectedDept.email}</span>
+                )}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[13px] text-muted-foreground flex-1 text-left">Chọn bộ môn liên kết...</span>
+          )}
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            {selectedDept && !disabled && (
+              <span
+                role="button"
+                onClick={handleClear}
+                className="h-5 w-5 flex items-center justify-center rounded-full hover:bg-muted-foreground/20 transition-colors"
+              >
+                <X className="h-3 w-3 text-muted-foreground" />
+              </span>
+            )}
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />
+          </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-50" align="start">
-        <div className="flex flex-col max-h-[300px] overflow-hidden bg-popover text-popover-foreground rounded-lg border shadow-lg">
-          {/* Hộp Tìm kiếm hợp nhất */}
-          <div className="flex items-center border-b px-3 py-2.5 gap-2 bg-slate-50/50 dark:bg-slate-900/50">
-            <Search className="h-4 w-4 shrink-0 opacity-50 text-muted-foreground" />
+
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-50 shadow-xl" align="start" sideOffset={4}>
+        <div className="flex flex-col max-h-[360px] overflow-hidden rounded-lg border bg-popover">
+          {/* Search bar */}
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-muted/30">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
             <input
-              placeholder="Tìm theo tên hoặc mã bộ môn..."
+              placeholder="Tìm theo tên, mã hoặc email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={disabled}
-              className="flex-1 bg-transparent text-xs outline-none border-none py-0.5 placeholder:text-muted-foreground/70"
+              className="flex-1 bg-transparent text-[13px] outline-none border-none py-0.5 placeholder:text-muted-foreground/50"
               autoFocus
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
-          {/* Danh sách bộ môn */}
-          <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+          {/* Department list */}
+          <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
             {filteredDepts.length === 0 ? (
-              <div className="text-center py-6 text-xs text-muted-foreground">
+              <div className="text-center py-10 text-[13px] text-muted-foreground">
                 Không tìm thấy bộ môn nào.
               </div>
             ) : (
               filteredDepts.map((dept) => {
                 const isSelected = dept.id === value
+                const isActive = dept.is_active !== false
 
                 return (
                   <button
@@ -655,30 +749,76 @@ export function DepartmentSelect({
                       setSearchTerm('')
                     }}
                     className={cn(
-                      "w-full text-left p-2.5 rounded-md transition-colors text-xs flex flex-col gap-1 cursor-pointer border border-transparent",
-                      isSelected 
-                        ? "bg-primary/10 text-primary font-medium border-primary/20" 
-                        : "hover:bg-muted/80 text-foreground"
+                      'w-full text-left px-2.5 py-2 rounded-md transition-colors cursor-pointer border border-transparent flex flex-col gap-1.5',
+                      isSelected
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'hover:bg-muted text-foreground'
                     )}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="font-semibold leading-relaxed break-words flex-1 text-slate-800 dark:text-slate-200">
+                    {/* Name row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <span className={cn('text-[13px] font-medium leading-snug flex-1', isSelected ? 'text-primary-foreground' : 'text-foreground')}>
                         {dept.name}
                       </span>
-                      {isSelected && <Check className="h-4 w-4 shrink-0 text-primary mt-0.5" />}
+                      {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-primary-foreground mt-0.5" />}
                     </div>
-                    {dept.code && (
-                      <div className="text-[10px] text-muted-foreground">
-                        Mã bộ môn: <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.2 rounded text-[9px] font-bold text-slate-600 dark:text-slate-300">{dept.code}</span>
-                      </div>
-                    )}
+
+                    {/* Meta row */}
+                    <div className={cn('flex flex-wrap items-center gap-1.5 text-[11px]', isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                      {/* Active badge */}
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded-[4px] font-medium text-[10px]',
+                        isSelected
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : isActive
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                      )}>
+                        {isActive ? 'Hoạt động' : 'Ngừng'}
+                      </span>
+
+                      {/* Staff count */}
+                      {dept.staff_count != null && (
+                        <span className={cn(
+                          'px-1.5 py-0.5 rounded-[4px] font-medium text-[10px]',
+                          isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        )}>
+                          {dept.staff_count} GV
+                        </span>
+                      )}
+
+                      {/* Code */}
+                      {dept.code && (
+                        <span className="font-mono text-[10px] opacity-70">{dept.code}</span>
+                      )}
+
+                      {/* Office */}
+                      {dept.office && (
+                        <span className="truncate max-w-[120px]">{dept.office}</span>
+                      )}
+
+                      {/* Email */}
+                      {dept.email && (
+                        <span className="truncate max-w-[140px]">{dept.email}</span>
+                      )}
+                    </div>
                   </button>
                 )
               })
             )}
           </div>
+
+          {/* Footer */}
+          {filteredDepts.length > 0 && (
+            <div className="border-t px-3 py-2 bg-muted/20">
+              <p className="text-[11px] text-muted-foreground/60">
+                {filteredDepts.length} bộ môn · Click để chọn
+              </p>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
   )
 }
+

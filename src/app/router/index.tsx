@@ -26,11 +26,13 @@ import TeacherCreatePage from '@/features/teachers/pages/TeacherCreatePage'
 import TeacherEditPage from '@/features/teachers/pages/TeacherEditPage'
 import TeacherDetailPage from '@/features/teachers/pages/TeacherDetailPage'
 
+import { TagsPage } from '@/features/tags/pages/TagsPage'
 import { ArticlesPage } from '@/features/articles/pages/ArticlesPage'
 import ArticleFormPage from '@/features/articles/pages/ArticleFormPage'
 import ArticleEditPage from '@/features/articles/pages/ArticleEditPage'
 import ArticleDetailPage from '@/features/articles/pages/ArticleDetailPage'
 import { ArticleDraftsPage } from '@/features/articles/pages/ArticleDraftsPage'
+import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { Button } from '@/shared/components/ui/button'
 import { Link } from 'react-router'
 
@@ -90,6 +92,10 @@ export const router = createBrowserRouter([
       {
         path: 'departments',
         element: <DepartmentsPage />,
+      },
+      {
+        path: 'tags',
+        element: <TagsPage />,
       },
       {
         path: 'banners',
@@ -169,6 +175,11 @@ export const router = createBrowserRouter([
         element: <EmbeddingSettingsPage />,
       },
 
+
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
 
       {
         path: '*',

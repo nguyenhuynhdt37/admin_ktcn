@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SortingState, RowSelectionState, PaginationState } from '@tanstack/react-table'
 import {
@@ -20,6 +20,7 @@ import { getPositionColumns } from '../components/positionColumns'
 import { positionService } from '../services/positionService'
 import { toast } from 'sonner'
 import { getMediaUrl } from '@/features/articles/utils/media'
+import { useSearchParams } from 'react-router'
 
 export function PositionsPage() {
   const queryClient = useQueryClient()
@@ -33,23 +34,70 @@ export function PositionsPage() {
     isLoading: boolean
   } | null>(null)
   
-  // Table states (Server-side pagination & sorting)
+  // Table states (URL Search Params)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'sort_order', desc: false }
-  ])
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  })
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const pageParam = Number(searchParams.get('page'))
+  const pageIndex = (pageParam && pageParam > 0) ? pageParam - 1 : 0
+  const pageSize = Number(searchParams.get('page_size')) || 10
+  const sortBy = searchParams.get('sort_by') || 'sort_order'
+  const sortDir = searchParams.get('sort_dir') || 'asc'
+
+  // Chuẩn hóa trang nếu URL chứa page=0 hoặc nhỏ hơn 1
+  useEffect(() => {
+    const pParam = searchParams.get('page')
+    if (pParam !== null) {
+      const pageNum = Number(pParam)
+      if (isNaN(pageNum) || pageNum < 1) {
+        const params = new URLSearchParams(searchParams)
+        params.set('page', '1')
+        setSearchParams(params)
+      }
+    }
+  }, [searchParams, setSearchParams])
+
+  const pagination = useMemo<PaginationState>(() => ({
+    pageIndex,
+    pageSize,
+  }), [pageIndex, pageSize])
+
+  const sorting = useMemo<SortingState>(() => [{
+    id: sortBy,
+    desc: sortDir === 'desc',
+  }], [sortBy, sortDir])
+
+  const setPagination = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    if (typeof value === 'function') {
+      const next = value({ pageIndex, pageSize })
+      params.set('page', String(next.pageIndex + 1))
+      params.set('page_size', String(next.pageSize))
+    } else {
+      params.set('page', String(value.pageIndex + 1))
+      params.set('page_size', String(value.pageSize))
+    }
+    setSearchParams(params)
+  }, [pageIndex, pageSize, searchParams, setSearchParams])
+
+  const setSorting = useCallback((value: any) => {
+    const params = new URLSearchParams(searchParams)
+    const nextSorting = typeof value === 'function' ? value(sorting) : value
+    if (nextSorting.length > 0) {
+      params.set('sort_by', nextSorting[0].id)
+      params.set('sort_dir', nextSorting[0].desc ? 'desc' : 'asc')
+      params.set('page', '1')
+    }
+    setSearchParams(params)
+  }, [sorting, searchParams, setSearchParams])
 
   // 1. Query: Fetch position list (Server-side paginated & sorted)
   const listParams = useMemo(() => ({
-    page: pagination.pageIndex + 1,
-    page_size: pagination.pageSize,
-    sort_by: sorting[0]?.id as 'sort_order' | 'name' | 'created_at' || 'sort_order',
-    order: sorting[0]?.desc ? 'desc' as const : 'asc' as const,
-  }), [pagination, sorting])
+    page: pageIndex + 1,
+    page_size: pageSize,
+    sort_by: sortBy as 'sort_order' | 'name' | 'created_at',
+    order: sortDir as 'asc' | 'desc',
+  }), [pageIndex, pageSize, sortBy, sortDir])
 
   const {
     data: positionData = { items: [], total_items: 0, total_pages: 1 },

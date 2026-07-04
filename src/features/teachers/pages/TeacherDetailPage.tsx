@@ -175,8 +175,8 @@ export default function TeacherDetailPage() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ngôn ngữ hiển thị nội dung</span>
               <div className="flex border bg-muted/30 rounded-lg p-0.5 gap-0.5 mb-2">
                 {[
-                  { code: 'vi' as const, label: 'Tiếng Việt', flag: '🇻🇳' },
-                  { code: 'en' as const, label: 'Tiếng Anh', flag: '🇬🇧' },
+                  { code: 'vi' as const, label: 'Tiếng Việt' },
+                  { code: 'en' as const, label: 'Tiếng Anh' },
                 ].map((tab) => (
                   <button
                     key={tab.code}
@@ -189,7 +189,6 @@ export default function TeacherDetailPage() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <span>{tab.flag}</span>
                     <span>{tab.label}</span>
                   </button>
                 ))}

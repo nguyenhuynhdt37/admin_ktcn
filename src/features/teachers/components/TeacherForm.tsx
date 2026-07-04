@@ -754,8 +754,8 @@ function TeacherFormInner({
               {/* Language Tabs */}
               <div className="flex border bg-muted/20 rounded-lg p-1 gap-1">
                 {[
-                  { code: 'vi' as const, label: 'Tiếng Việt', flag: '🇻🇳' },
-                  { code: 'en' as const, label: 'Tiếng Anh', flag: '🇬🇧' },
+                  { code: 'vi' as const, label: 'Tiếng Việt' },
+                  { code: 'en' as const, label: 'Tiếng Anh' },
                 ].map((tab) => (
                   <button
                     key={tab.code}
@@ -768,7 +768,6 @@ function TeacherFormInner({
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
-                    <span>{tab.flag}</span>
                     <span>{tab.label}</span>
                   </button>
                 ))}

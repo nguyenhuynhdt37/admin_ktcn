@@ -69,17 +69,14 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const loginResponse = await httpClient.post('/auth/login', {
+      await httpClient.post('/auth/login', {
         username: data.username,
         password: data.password,
       })
-      const { access_token } = loginResponse.data
 
-      const userResponse = await httpClient.get('/auth/me', {
-        headers: { Authorization: `Bearer ${access_token}` },
-      })
+      const userResponse = await httpClient.get('/auth/me')
 
-      login(userResponse.data, access_token)
+      login(userResponse.data, '')
       toast.success('Đăng nhập thành công!')
       navigate(from, { replace: true })
     } catch (err) {

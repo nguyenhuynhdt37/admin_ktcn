@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
-import { Languages, Loader2 } from 'lucide-react'
+import { Languages, Loader2, Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
+import { articleService } from '../../services/articleService'
 
 interface ArticleBasicInfoSectionProps {
   title: string
@@ -22,6 +25,11 @@ interface ArticleBasicInfoSectionProps {
   isTranslatingTitle?: boolean
   onTranslateExcerpt?: () => void
   isTranslatingExcerpt?: boolean
+
+  // Props cho AI Summarize
+  articleId: string | null
+  content: string
+  lang: 'vi' | 'en'
 }
 
 export function ArticleBasicInfoSection({
@@ -39,9 +47,40 @@ export function ArticleBasicInfoSection({
   isTranslatingTitle = false,
   onTranslateExcerpt,
   isTranslatingExcerpt = false,
+  articleId,
+  content,
+  lang,
 }: ArticleBasicInfoSectionProps) {
+  const [isSummarizing, setIsSummarizing] = useState(false)
+
+  const handleSummarize = async () => {
+    if (!content.trim()) {
+      toast.error('Nội dung bài viết hiện đang trống. Vui lòng viết nội dung trước khi tóm tắt.')
+      return
+    }
+
+    setIsSummarizing(true)
+    const toastId = toast.loading('AI đang phân tích và tóm tắt bài viết của bạn...')
+    const targetId = articleId || (crypto.randomUUID ? crypto.randomUUID() : 'f47ac10b-58cc-4372-a567-0e02b2c3d479')
+
+    try {
+      const res = await articleService.seoSummarize(targetId, {
+        content: content.trim(),
+        max_length: 150,
+        lang,
+      })
+      setExcerpt(res.summary)
+      toast.success('Tóm tắt bài viết bằng AI thành công!', { id: toastId })
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err?.response?.data?.error?.message || 'Tóm tắt bài viết thất bại. Vui lòng thử lại.', { id: toastId })
+    } finally {
+      setIsSummarizing(false)
+    }
+  }
+
   return (
-    <Card className="bg-card text-card-foreground">
+    <Card className="bg-card text-card-foreground text-left">
       <CardHeader>
         <CardTitle className="text-base font-semibold">Thông tin cơ bản</CardTitle>
       </CardHeader>
@@ -107,19 +146,34 @@ export function ArticleBasicInfoSection({
             <Label htmlFor="excerpt" className="text-xs font-semibold text-foreground">
               Tóm tắt ngắn (Excerpt)
             </Label>
-            {showTranslateActions && onTranslateExcerpt && (
+            <div className="flex items-center gap-1.5">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={onTranslateExcerpt}
-                disabled={isTranslatingExcerpt || disabled}
-                className="h-6 px-2 text-[10px] text-primary hover:bg-primary/5 cursor-pointer flex items-center gap-1 font-semibold border border-primary/20"
+                onClick={handleSummarize}
+                disabled={isSummarizing || disabled || !content.trim()}
+                className="h-6 px-2 text-[10px] text-purple-600 dark:text-purple-400 hover:bg-purple-500/5 cursor-pointer flex items-center gap-1 font-semibold border border-purple-500/20"
+                title="Sử dụng AI tự động tóm tắt từ nội dung bài viết dài"
               >
-                {isTranslatingExcerpt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
-                <span>Dịch từ Tiếng Việt</span>
+                {isSummarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 animate-pulse" />}
+                <span>Tóm tắt bằng AI</span>
               </Button>
-            )}
+
+              {showTranslateActions && onTranslateExcerpt && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onTranslateExcerpt}
+                  disabled={isTranslatingExcerpt || disabled}
+                  className="h-6 px-2 text-[10px] text-primary hover:bg-primary/5 cursor-pointer flex items-center gap-1 font-semibold border border-primary/20"
+                >
+                  {isTranslatingExcerpt ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                  <span>Dịch từ Tiếng Việt</span>
+                </Button>
+              )}
+            </div>
           </div>
           <Textarea
             id="excerpt"

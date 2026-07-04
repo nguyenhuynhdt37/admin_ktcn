@@ -53,7 +53,6 @@ export interface Article {
   tags: TagInfo[]
   author: AuthorInfo
   status: 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'
-  is_featured: boolean
   is_pinned: boolean
   is_draft: boolean // Phân tách bản nháp
   view_count: number
@@ -79,7 +78,6 @@ export interface ArticleListParams {
   author_id?: string | null
   tag_ids?: string[] | null
   status?: 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED' | null
-  is_featured?: boolean | null
   is_pinned?: boolean | null
   is_draft?: boolean | null // Lọc nháp
   created_from?: string | null
@@ -107,6 +105,7 @@ export interface CategorySearchItem {
   id: string
   name: string
   slug: string
+  article_count?: number
 }
 
 export interface AuthorSearchItem {
@@ -120,6 +119,7 @@ export interface AuthorSearchItem {
 export interface TagSearchItem {
   id: string
   color?: string
+  article_count?: number
   is_translated?: Record<string, boolean>
   translations?: {
     vi: TagTranslation
@@ -174,10 +174,83 @@ export interface ArticleCreatePayload {
   expire_at?: string | null
   thumbnail_object_key?: string | null
   cover_object_key?: string | null
-  is_featured?: boolean
   is_pinned?: boolean
   translations: {
     vi: Partial<ArticleTranslation>
     en?: Partial<ArticleTranslation> | null
   }
 }
+
+export interface SeoIssue {
+  type: string
+  message: string
+}
+
+export interface InternalLink {
+  anchor_text: string
+  url: string
+  reason: string
+}
+
+export interface SeoAnalysisResponse {
+  score: number
+  status: 'good' | 'warning' | 'error'
+  issues: SeoIssue[]
+  suggestions: string[]
+  generated_seo_title: string
+  generated_meta_description: string
+  focus_keywords: string[]
+  internal_links: InternalLink[]
+}
+
+export interface SeoAnalyzePayload {
+  title: string
+  content: string
+  excerpt: string
+  seo_title: string | null
+  seo_description: string | null
+  focus_keyword: string | null
+  lang: 'vi' | 'en'
+  thumbnail_object_key?: string | null
+  slug?: string | null
+}
+
+export interface ArticleSEORewriteRequest {
+  content: string
+  focus_keyword?: string | null
+  tone?: 'chuyên nghiệp' | 'thuyết phục' | 'sáng tạo' | 'học thuật' | string
+  lang?: 'vi' | 'en' | string
+}
+
+export interface ArticleSEORewriteResponse {
+  content: string
+}
+
+export interface ArticleGenerateByIdeaRequest {
+  idea: string
+  focus_keyword?: string | null
+  tone?: 'chuyên nghiệp' | 'thuyết phục' | 'sáng tạo' | 'học thuật' | string
+  lang?: 'vi' | 'en' | string
+}
+
+export interface ArticleGenerateByIdeaResponse {
+  title: string
+  excerpt: string
+  content: string
+  seo_title: string
+  seo_description: string
+  slug: string
+}
+
+export interface ArticleSummaryRequest {
+  content: string
+  max_length?: number
+  lang?: 'vi' | 'en' | string
+}
+
+export interface ArticleSummaryResponse {
+  summary: string
+}
+
+
+

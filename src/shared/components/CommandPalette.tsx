@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Dialog,
@@ -11,15 +11,28 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  Shield,
-  Palette,
+  FolderTree,
+  Tags,
+  Image,
+  GraduationCap,
+  Building2,
+  Briefcase,
+  Menu as MenuIcon,
+  Languages,
+  Bot,
+  Database,
+  ClipboardList,
+  UserCircle,
   SunMoon,
   LogOut,
   HelpCircle,
-  Settings,
   ChevronRight,
+  Loader2,
+  FileEdit,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { httpClient } from '@/services/http/client'
+import logoDhVinh from '@/assets/logo-dhvinh.png'
 
 interface CommandPaletteProps {
   isOpen: boolean
@@ -34,9 +47,18 @@ interface CommandItem {
   title: string
   subtitle?: string
   icon: React.ComponentType<{ className?: string }>
-  category: 'pages' | 'actions'
+  category: 'search-articles' | 'search-users' | 'search-categories' | 'search-tags' | 'search-staff' | 'pages' | 'actions'
   action: () => void
   shortcut?: string[]
+}
+
+// Kết quả tìm kiếm từ API
+interface SearchResults {
+  articles: { id: string; title: string; slug: string; status: string; category_name: string | null; published_at: string | null }[]
+  users: { id: string; full_name: string; email: string; username: string }[]
+  categories: { id: string; name: string; slug: string }[]
+  tags: { id: string; name: string; slug: string }[]
+  staff: { id: string; full_name: string; email: string; slug: string }[]
 }
 
 export function CommandPalette({
@@ -49,216 +71,319 @@ export function CommandPalette({
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const modKey = getModifierKey()
   const altKey = getAltKey()
 
-  // Định nghĩa các lệnh tìm kiếm
-  const commands: CommandItem[] = [
-    // Phân mục: Trang quản trị
+  // Helper để navigate và đóng palette
+  const go = useCallback((path: string) => {
+    navigate(path)
+    onClose()
+  }, [navigate, onClose])
+
+  // Danh sách tất cả trang trong hệ thống
+  const pageCommands: CommandItem[] = [
     {
-      id: 'dashboard',
-      title: 'Tổng quan (Dashboard)',
-      subtitle: 'Xem biểu đồ và báo cáo hệ thống',
-      icon: LayoutDashboard,
-      category: 'pages',
-      action: () => {
-        navigate('/dashboard')
-        onClose()
-      },
-      shortcut: [altKey, 'D'],
+      id: 'dashboard', title: 'Tổng quan (Dashboard)', subtitle: 'Biểu đồ và báo cáo hệ thống',
+      icon: LayoutDashboard, category: 'pages', action: () => go('/dashboard'), shortcut: [altKey, 'D'],
     },
     {
-      id: 'articles',
-      title: 'Quản lý bài viết',
-      subtitle: 'Danh sách bài viết tin tức và bài học',
-      icon: FileText,
-      category: 'pages',
-      action: () => {
-        navigate('/articles')
-        onClose()
-      },
+      id: 'articles', title: 'Quản lý bài viết', subtitle: 'Danh sách bài viết tin tức',
+      icon: FileText, category: 'pages', action: () => go('/articles'),
     },
     {
-      id: 'users',
-      title: 'Quản lý thành viên',
-      subtitle: 'Xem, tạo mới và phân quyền thành viên',
-      icon: Users,
-      category: 'pages',
-      action: () => {
-        navigate('/users')
-        onClose()
-      },
-      shortcut: [altKey, 'U'],
+      id: 'drafts', title: 'Bản nháp bài viết', subtitle: 'Bài viết đang soạn thảo',
+      icon: FileEdit, category: 'pages', action: () => go('/articles/drafts'),
     },
     {
-      id: 'roles',
-      title: 'Quản lý vai trò & quyền',
-      subtitle: 'Cấu hình quyền hạn của nhóm người dùng',
-      icon: Shield,
-      category: 'pages',
-      action: () => {
-        navigate('/roles')
-        onClose()
-      },
-      shortcut: [altKey, 'R'],
+      id: 'categories', title: 'Quản lý danh mục', subtitle: 'Phân loại bài viết',
+      icon: FolderTree, category: 'pages', action: () => go('/categories'),
     },
     {
-      id: 'ui-sandbox',
-      title: 'Thư viện giao diện (UI Sandbox)',
-      subtitle: 'Các component giao diện mẫu',
-      icon: Palette,
-      category: 'pages',
-      action: () => {
-        navigate('/ui-sandbox')
-        onClose()
-      },
+      id: 'tags', title: 'Quản lý thẻ (Tags)', subtitle: 'Gán nhãn cho bài viết',
+      icon: Tags, category: 'pages', action: () => go('/tags'),
     },
     {
-      id: 'settings',
-      title: 'Cấu hình hệ thống',
-      subtitle: 'Quản lý thiết lập hệ thống và CMS',
-      icon: Settings,
-      category: 'pages',
-      action: () => {
-        navigate('/settings')
-        onClose()
-      },
-    },
-    // Phân mục: Hành động nhanh
-    {
-      id: 'toggle-theme',
-      title: 'Chuyển đổi giao diện Sáng / Tối',
-      subtitle: 'Thay đổi theme hệ thống',
-      icon: SunMoon,
-      category: 'actions',
-      action: () => {
-        onToggleTheme()
-        onClose()
-      },
-      shortcut: [altKey, 'T'],
+      id: 'banners', title: 'Quản lý Banner', subtitle: 'Hình ảnh quảng cáo, slider',
+      icon: Image, category: 'pages', action: () => go('/banners'),
     },
     {
-      id: 'keyboard-help',
-      title: 'Xem danh sách phím tắt',
-      subtitle: 'Mở bảng trợ giúp phím tắt nhanh',
-      icon: HelpCircle,
-      category: 'actions',
-      action: () => {
-        onClose()
-        setTimeout(() => {
-          onOpenHelp()
-        }, 100) // Đợi đóng Command Palette xong mới mở Help Modal
-      },
-      shortcut: ['?'],
+      id: 'teachers', title: 'Quản lý nhân sự', subtitle: 'Giảng viên và cán bộ',
+      icon: GraduationCap, category: 'pages', action: () => go('/teachers'),
     },
     {
-      id: 'logout',
-      title: 'Đăng xuất khỏi hệ thống',
-      subtitle: 'Kết thúc phiên làm việc hiện tại',
-      icon: LogOut,
-      category: 'actions',
-      action: () => {
-        onLogout()
-        onClose()
-      },
+      id: 'departments', title: 'Quản lý phòng ban', subtitle: 'Cơ cấu tổ chức',
+      icon: Building2, category: 'pages', action: () => go('/departments'),
+    },
+    {
+      id: 'positions', title: 'Quản lý chức vụ', subtitle: 'Danh sách chức vụ',
+      icon: Briefcase, category: 'pages', action: () => go('/positions'),
+    },
+    {
+      id: 'users', title: 'Quản lý thành viên', subtitle: 'Tài khoản và phân quyền',
+      icon: Users, category: 'pages', action: () => go('/users'), shortcut: [altKey, 'U'],
+    },
+    {
+      id: 'menus', title: 'Quản lý Menu', subtitle: 'Menu điều hướng website',
+      icon: MenuIcon, category: 'pages', action: () => go('/menus'),
+    },
+    {
+      id: 'languages', title: 'Quản lý ngôn ngữ', subtitle: 'Đa ngôn ngữ hệ thống',
+      icon: Languages, category: 'pages', action: () => go('/languages'),
+    },
+    {
+      id: 'ai-hub', title: 'AI Hub', subtitle: 'Cài đặt trợ lý AI',
+      icon: Bot, category: 'pages', action: () => go('/languages/ai-hub'),
+    },
+    {
+      id: 'embedding', title: 'Cài đặt Embedding', subtitle: 'Vector embedding cho AI',
+      icon: Database, category: 'pages', action: () => go('/languages/embedding'),
+    },
+    {
+      id: 'audit-logs', title: 'Nhật ký hệ thống', subtitle: 'Lịch sử thao tác quản trị',
+      icon: ClipboardList, category: 'pages', action: () => go('/audit-logs'), shortcut: [altKey, 'L'],
+    },
+    {
+      id: 'profile', title: 'Hồ sơ cá nhân', subtitle: 'Thông tin tài khoản của bạn',
+      icon: UserCircle, category: 'pages', action: () => go('/profile'),
     },
   ]
 
-  // Filter commands dựa trên nội dung search
-  const filteredCommands = commands.filter((cmd) => {
-    const searchString = `${cmd.title} ${cmd.subtitle || ''} ${cmd.category}`.toLowerCase()
-    return searchString.includes(search.toLowerCase())
+  // Hành động nhanh
+  const actionCommands: CommandItem[] = [
+    {
+      id: 'toggle-theme', title: 'Chuyển đổi giao diện Sáng / Tối', subtitle: 'Thay đổi theme hệ thống',
+      icon: SunMoon, category: 'actions', action: () => { onToggleTheme(); onClose() }, shortcut: [altKey, 'T'],
+    },
+    {
+      id: 'keyboard-help', title: 'Xem danh sách phím tắt', subtitle: 'Mở bảng trợ giúp phím tắt nhanh',
+      icon: HelpCircle, category: 'actions',
+      action: () => { onClose(); setTimeout(() => onOpenHelp(), 100) }, shortcut: ['?'],
+    },
+    {
+      id: 'logout', title: 'Đăng xuất khỏi hệ thống', subtitle: 'Kết thúc phiên làm việc hiện tại',
+      icon: LogOut, category: 'actions', action: () => { onLogout(); onClose() },
+    },
+  ]
+
+  // Chuyển kết quả search API thành CommandItem
+  const buildSearchCommands = (): CommandItem[] => {
+    if (!searchResults) return []
+    const items: CommandItem[] = []
+
+    for (const a of searchResults.articles) {
+      const statusLabel = a.status === 'published' ? 'Đã đăng' : a.status === 'draft' ? 'Bản nháp' : a.status === 'archived' ? 'Lưu trữ' : a.status
+      const parts: string[] = []
+      if (a.category_name) parts.push(a.category_name)
+      parts.push(statusLabel)
+      // Thêm slug rút gọn nếu title trùng nhau
+      const shortSlug = a.slug.length > 30 ? a.slug.substring(0, 30) + '…' : a.slug
+      parts.push(`/${shortSlug}`)
+      items.push({
+        id: `article-${a.id}`, title: a.title,
+        subtitle: parts.join(' · '),
+        icon: FileText, category: 'search-articles',
+        action: () => go(`/articles/${a.id}/edit`),
+      })
+    }
+    for (const u of searchResults.users) {
+      items.push({
+        id: `user-${u.id}`, title: u.full_name, subtitle: u.email,
+        icon: Users, category: 'search-users',
+        action: () => go(`/users/${u.id}/edit`),
+      })
+    }
+    for (const c of searchResults.categories) {
+      items.push({
+        id: `cat-${c.id}`, title: c.name, subtitle: 'Danh mục',
+        icon: FolderTree, category: 'search-categories',
+        action: () => go('/categories'),
+      })
+    }
+    for (const t of searchResults.tags) {
+      items.push({
+        id: `tag-${t.id}`, title: t.name, subtitle: 'Thẻ',
+        icon: Tags, category: 'search-tags',
+        action: () => go('/tags'),
+      })
+    }
+    for (const s of searchResults.staff) {
+      items.push({
+        id: `staff-${s.id}`, title: s.full_name, subtitle: s.email || 'Nhân sự',
+        icon: GraduationCap, category: 'search-staff',
+        action: () => go(`/teachers/${s.id}/edit`),
+      })
+    }
+    return items
+  }
+
+  // Gọi API tìm kiếm (debounce 300ms)
+  const performSearch = useCallback(async (keyword: string) => {
+    if (keyword.length < 2) {
+      setSearchResults(null)
+      setIsSearching(false)
+      return
+    }
+    setIsSearching(true)
+    try {
+      const { data } = await httpClient.get<SearchResults>('/admin/search', { params: { q: keyword, limit: 5 } })
+      setSearchResults(data)
+    } catch {
+      setSearchResults(null)
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  // Debounce search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (search.trim().length >= 2) {
+      setIsSearching(true)
+      debounceRef.current = setTimeout(() => performSearch(search.trim()), 300)
+    } else {
+      setSearchResults(null)
+      setIsSearching(false)
+    }
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [search, performSearch])
+
+  // Xây dựng danh sách command
+  const searchCommands = buildSearchCommands()
+  const hasSearchQuery = search.trim().length >= 2
+
+  // Filter pages/actions theo text
+  const filteredPages = pageCommands.filter((cmd) => {
+    const s = `${cmd.title} ${cmd.subtitle || ''}`.toLowerCase()
+    return s.includes(search.toLowerCase())
+  })
+  const filteredActions = actionCommands.filter((cmd) => {
+    const s = `${cmd.title} ${cmd.subtitle || ''}`.toLowerCase()
+    return s.includes(search.toLowerCase())
   })
 
-  // Reset selectedIndex khi search thay đổi
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [search])
+  // Gộp tất cả commands: search results trước, rồi pages, rồi actions
+  const allCommands = hasSearchQuery
+    ? [...searchCommands, ...filteredPages, ...filteredActions]
+    : [...filteredPages, ...filteredActions]
 
-  // Focus input khi mở Command Palette
+  // Categories cho UI
+  const searchCategories = [
+    { id: 'search-articles', name: '📄 Bài viết' },
+    { id: 'search-users', name: '👤 Thành viên' },
+    { id: 'search-categories', name: '📂 Danh mục' },
+    { id: 'search-tags', name: '🏷️ Thẻ' },
+    { id: 'search-staff', name: '👨‍🏫 Nhân sự' },
+  ]
+
+  const displayCategories = hasSearchQuery
+    ? [
+        ...searchCategories,
+        { id: 'pages', name: 'Trang quản trị' },
+        { id: 'actions', name: 'Thao tác nhanh' },
+      ]
+    : [
+        { id: 'pages', name: 'Trang quản trị & Điều hướng' },
+        { id: 'actions', name: 'Thao tác nhanh' },
+      ]
+
+  // Reset khi search thay đổi
+  useEffect(() => { setSelectedIndex(0) }, [search])
+
+  // Focus input khi mở
   useEffect(() => {
     if (isOpen) {
       setSearch('')
       setSelectedIndex(0)
-      // Thêm timeout nhỏ để đảm bảo input đã render trong DOM
-      setTimeout(() => {
-        inputRef.current?.focus()
-      }, 50)
+      setSearchResults(null)
+      setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [isOpen])
 
-  // Xử lý sự kiện nhấn phím để duyệt danh sách
+  // Keyboard navigation
   useEffect(() => {
-    if (!isOpen || filteredCommands.length === 0) return
+    if (!isOpen || allCommands.length === 0) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % filteredCommands.length)
+        setSelectedIndex((prev) => (prev + 1) % allCommands.length)
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSelectedIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length)
+        setSelectedIndex((prev) => (prev - 1 + allCommands.length) % allCommands.length)
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        filteredCommands[selectedIndex].action()
+        allCommands[selectedIndex]?.action()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, filteredCommands, selectedIndex])
+  }, [isOpen, allCommands, selectedIndex])
 
-  // Tự động cuộn danh sách khi selectedIndex thay đổi
+  // Auto-scroll active item
   useEffect(() => {
     if (!listRef.current) return
     const activeItem = listRef.current.querySelector('[data-active="true"]') as HTMLElement
-    if (activeItem) {
-      activeItem.scrollIntoView({
-        block: 'nearest',
-      })
-    }
+    if (activeItem) activeItem.scrollIntoView({ block: 'nearest' })
   }, [selectedIndex])
 
-  // Gom nhóm lệnh
-  const categories = [
-    { id: 'pages', name: 'Trang quản trị & Điều hướng' },
-    { id: 'actions', name: 'Thao tác nhanh' },
-  ]
+  const totalSearchResults = searchCommands.length
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl overflow-hidden p-0 border-border bg-background/80 backdrop-blur-lg shadow-2xl transition-all duration-300">
-        {/* Search Input bar */}
+        {/* Brand Header */}
+        <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/20">
+          <div className="flex items-center gap-2.5">
+            <img src={logoDhVinh} alt="Đại học Vinh Logo" className="h-6 w-6 object-contain" />
+            <div className="flex flex-col text-left">
+              <span className="text-[11px] font-bold tracking-tight text-foreground leading-tight">
+                ĐẠI HỌC VINH
+              </span>
+              <span className="text-[8px] text-muted-foreground font-mono leading-none">
+                CMS Search Portal
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider bg-card px-2 py-0.5 rounded border border-border/40">
+            Hộp lệnh nhanh
+          </span>
+        </div>
+
+        {/* Search Input */}
         <div className="flex items-center border-b px-4 py-3.5">
           <Search className="mr-3 h-5 w-5 shrink-0 text-muted-foreground" />
           <Input
             ref={inputRef}
-            placeholder="Gõ lệnh hoặc tên trang cần tìm kiếm..."
+            placeholder="Tìm kiếm bài viết, thành viên, danh mục, hoặc gõ lệnh..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-hidden border-none focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
           />
-          <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
-            <span>ESC</span>
-          </kbd>
+          <div className="flex items-center gap-2 shrink-0 ml-2">
+            {isSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <kbd className="pointer-events-none hidden h-6 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
+              <span>ESC</span>
+            </kbd>
+          </div>
         </div>
 
         {/* Results List */}
-        <div
-          ref={listRef}
-          className="max-h-[350px] overflow-y-auto p-2"
-        >
-          {filteredCommands.length === 0 ? (
+        <div ref={listRef} className="max-h-[400px] overflow-y-auto p-2">
+          {allCommands.length === 0 && !isSearching ? (
             <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
               <Search className="h-8 w-8 mb-2 opacity-40 text-muted-foreground" />
-              <p className="text-sm">Không tìm thấy lệnh hoặc trang phù hợp</p>
+              <p className="text-sm">Không tìm thấy kết quả phù hợp</p>
             </div>
           ) : (
-            categories.map((cat) => {
-              const catCommands = filteredCommands.filter((cmd) => cmd.category === cat.id)
+            displayCategories.map((cat) => {
+              const catCommands = allCommands.filter((cmd) => cmd.category === cat.id)
               if (catCommands.length === 0) return null
 
               return (
@@ -268,8 +393,7 @@ export function CommandPalette({
                   </h4>
                   <div className="space-y-0.5 mt-1">
                     {catCommands.map((cmd) => {
-                      // Tính toán index toàn cục của command trong filteredCommands
-                      const globalIndex = filteredCommands.findIndex((c) => c.id === cmd.id)
+                      const globalIndex = allCommands.findIndex((c) => c.id === cmd.id)
                       const isActive = globalIndex === selectedIndex
 
                       return (
@@ -284,7 +408,7 @@ export function CommandPalette({
                               : 'hover:bg-muted text-foreground'
                           )}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <div
                               className={cn(
                                 'flex h-8 w-8 items-center justify-center rounded-md border shrink-0',
@@ -295,7 +419,7 @@ export function CommandPalette({
                             >
                               <cmd.icon className="h-4.5 w-4.5" />
                             </div>
-                            <div className="overflow-hidden">
+                            <div className="overflow-hidden min-w-0">
                               <p className="text-sm truncate font-medium">{cmd.title}</p>
                               <p
                                 className={cn(
@@ -343,14 +467,18 @@ export function CommandPalette({
           )}
         </div>
 
-        {/* Footer Info */}
+        {/* Footer */}
         <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/30 text-[11px] text-muted-foreground">
           <div className="flex items-center gap-3">
             <span>Dùng phím <kbd className="font-mono bg-card border px-1 rounded">↑↓</kbd> để di chuyển</span>
             <span><kbd className="font-mono bg-card border px-1 rounded">Enter</kbd> để thực thi</span>
           </div>
           <div>
-            <span>Có tất cả {commands.length} chức năng hệ thống</span>
+            {hasSearchQuery && totalSearchResults > 0 ? (
+              <span>{totalSearchResults} kết quả tìm kiếm</span>
+            ) : (
+              <span>{pageCommands.length} trang · {actionCommands.length} hành động</span>
+            )}
           </div>
         </div>
       </DialogContent>
