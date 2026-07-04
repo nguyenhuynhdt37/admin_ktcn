@@ -170,8 +170,11 @@ export function AIPlayground({ chatModels, defaultModel, isLoadingModels }: AIPl
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Max Tokens</label>
             <Input
               type="number"
+              min={50}
+              max={8000}
               value={maxTokens}
-              onChange={(e) => setMaxTokens(parseInt(e.target.value) || 100)}
+              onChange={(e) => setMaxTokens(Math.min(8000, Math.max(50, parseInt(e.target.value) || 100)))}
+              onBlur={() => setMaxTokens((prev) => Math.min(8000, Math.max(50, prev)))}
               className="bg-background h-8 text-xs font-mono border-border/80"
             />
           </div>

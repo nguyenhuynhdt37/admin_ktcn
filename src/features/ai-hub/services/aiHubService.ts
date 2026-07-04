@@ -57,7 +57,7 @@ export const aiHubService = {
   },
 
   callPlayground: async (payload: AIPlaygroundRequest): Promise<AIPlaygroundResponse> => {
-    const response = await httpClient.post<AIPlaygroundResponse>('/ai-hub/playground', payload)
+    const response = await httpClient.post<AIPlaygroundResponse>('/ai-hub/playground', payload, { timeout: 60000 })
     return response.data
   },
 
@@ -66,7 +66,8 @@ export const aiHubService = {
   ): Promise<AIEmbeddingPlaygroundResponse> => {
     const response = await httpClient.post<AIEmbeddingPlaygroundResponse>(
       '/ai-hub/embedding-playground',
-      payload
+      payload,
+      { timeout: 60000 }
     )
     return response.data
   },

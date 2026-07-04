@@ -94,11 +94,6 @@ export default function ArticlePreviewContent({
             {article.category?.name || 'Chưa phân loại'}
           </Badge>
           <StatusBadge status={article.status} />
-          {article.is_featured && (
-            <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 shadow-none font-semibold text-[10px] rounded-full px-2.5 py-0.5 hover:bg-transparent">
-              ★ Nổi bật
-            </Badge>
-          )}
           {article.is_pinned && (
             <Badge className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/25 shadow-none font-semibold text-[10px] rounded-full px-2.5 py-0.5 hover:bg-transparent">
               📌 Ghim

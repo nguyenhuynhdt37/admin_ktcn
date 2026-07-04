@@ -53,7 +53,6 @@ export interface Article {
   tags: TagInfo[]
   author: AuthorInfo
   status: 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'
-  is_featured: boolean
   is_pinned: boolean
   is_draft: boolean // Phân tách bản nháp
   view_count: number
@@ -79,7 +78,6 @@ export interface ArticleListParams {
   author_id?: string | null
   tag_ids?: string[] | null
   status?: 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED' | null
-  is_featured?: boolean | null
   is_pinned?: boolean | null
   is_draft?: boolean | null // Lọc nháp
   created_from?: string | null
@@ -176,7 +174,6 @@ export interface ArticleCreatePayload {
   expire_at?: string | null
   thumbnail_object_key?: string | null
   cover_object_key?: string | null
-  is_featured?: boolean
   is_pinned?: boolean
   translations: {
     vi: Partial<ArticleTranslation>

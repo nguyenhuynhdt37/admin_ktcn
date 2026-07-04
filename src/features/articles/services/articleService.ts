@@ -104,7 +104,7 @@ export const articleService = {
     return data
   },
 
-  updateAttributes: async (id: string, payload: { is_featured?: boolean; is_pinned?: boolean }): Promise<Article> => {
+  updateAttributes: async (id: string, payload: { is_pinned?: boolean }): Promise<Article> => {
     const { data } = await httpClient.patch<Article>(`/admin/articles/${id}/attributes`, payload)
     return data
   },

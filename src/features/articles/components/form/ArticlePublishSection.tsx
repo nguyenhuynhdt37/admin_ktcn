@@ -29,8 +29,6 @@ interface ArticlePublishSectionProps {
   setExpireAt: (value: string) => void
 
   // Attributes
-  isFeatured: boolean
-  setIsFeatured: (value: boolean) => void
   isPinned: boolean
   setIsPinned: (value: boolean) => void
 
@@ -56,8 +54,6 @@ export function ArticlePublishSection({
   setPublishAt,
   expireAt,
   setExpireAt,
-  isFeatured,
-  setIsFeatured,
   isPinned,
   setIsPinned,
   disabled = false,
@@ -214,19 +210,6 @@ export function ArticlePublishSection({
 
         {/* Attributes Switches */}
         <div className="pt-4 border-t space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-xs font-semibold text-foreground">Bài viết nổi bật</Label>
-              <p className="text-[10px] text-muted-foreground">Hiển thị ở mục banner/ưu tiên</p>
-            </div>
-            <Switch
-              checked={isFeatured}
-              onCheckedChange={setIsFeatured}
-              disabled={disabled}
-              className="cursor-pointer"
-            />
-          </div>
-
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label className="text-xs font-semibold text-foreground">Ghim lên đầu trang</Label>

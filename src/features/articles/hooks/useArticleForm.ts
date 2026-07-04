@@ -136,7 +136,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   const [expireAt, setExpireAt] = useState('')
   const [thumbnailKey, setThumbnailKey] = useState<string | null>(null)
   const [coverKey, setCoverKey] = useState<string | null>(null)
-  const [isFeatured, setIsFeatured] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
 
   // Drafts Modal state & count query
@@ -256,7 +255,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       )
       setThumbnailKey(articleDetail.thumbnail_object_key || null)
       setCoverKey(articleDetail.cover_object_key || null)
-      setIsFeatured(articleDetail.is_featured)
       setIsPinned(articleDetail.is_pinned)
 
       // Lưu giá trị ban đầu sạch để so sánh độ thay đổi (isDirty)
@@ -290,7 +288,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
         expireAt: articleDetail.expire_at ? dayjs(articleDetail.expire_at).format('YYYY-MM-DDTHH:mm') : '',
         thumbnailKey: articleDetail.thumbnail_object_key || null,
         coverKey: articleDetail.cover_object_key || null,
-        isFeatured: articleDetail.is_featured,
         isPinned: articleDetail.is_pinned,
       }
     }
@@ -567,7 +564,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       init.expireAt !== expireAt ||
       init.thumbnailKey !== thumbnailKey ||
       init.coverKey !== coverKey ||
-      init.isFeatured !== isFeatured ||
       init.isPinned !== isPinned
     )
   }
@@ -678,7 +674,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       expire_at: formattedExpireAt,
       thumbnail_object_key: thumbnailKey,
       cover_object_key: coverKey,
-      is_featured: isFeatured,
       is_pinned: isPinned,
       translations: {
         vi: {
@@ -768,7 +763,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
       expire_at: formattedExpireAt,
       thumbnail_object_key: thumbnailKey,
       cover_object_key: coverKey,
-      is_featured: isFeatured,
       is_pinned: isPinned,
       translations: {
         vi: {
@@ -895,8 +889,6 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
     setThumbnailKey,
     coverKey,
     setCoverKey,
-    isFeatured,
-    setIsFeatured,
     isPinned,
     setIsPinned,
 

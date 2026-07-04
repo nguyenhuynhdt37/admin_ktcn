@@ -96,8 +96,6 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
     setThumbnailKey,
     coverKey,
     setCoverKey,
-    isFeatured,
-    setIsFeatured,
     isPinned,
     setIsPinned,
 
@@ -450,8 +448,6 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               setPublishAt={setPublishAt}
               expireAt={expireAt}
               setExpireAt={setExpireAt}
-              isFeatured={isFeatured}
-              setIsFeatured={setIsFeatured}
               isPinned={isPinned}
               setIsPinned={setIsPinned}
               disabled={isFormDisabled}

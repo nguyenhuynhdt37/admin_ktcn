@@ -234,40 +234,22 @@ export function ArticleFilters({ filters, onChange, onReset }: ArticleFiltersPro
             </Select>
           </div>
 
-          {/* Lọc nổi bật / ghim */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Nổi bật</Label>
-              <Select
-                value={filters.is_featured === null || filters.is_featured === undefined ? 'all' : String(filters.is_featured)}
-                onValueChange={(val) => handleFilterChange('is_featured', val === 'all' ? null : val === 'true')}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Tất cả" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="true">Nổi bật</SelectItem>
-                  <SelectItem value="false">Thường</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Ghim</Label>
-              <Select
-                value={filters.is_pinned === null || filters.is_pinned === undefined ? 'all' : String(filters.is_pinned)}
-                onValueChange={(val) => handleFilterChange('is_pinned', val === 'all' ? null : val === 'true')}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Tất cả" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="true">Được ghim</SelectItem>
-                  <SelectItem value="false">Thường</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Lọc ghim */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">Ghim</Label>
+            <Select
+              value={filters.is_pinned === null || filters.is_pinned === undefined ? 'all' : String(filters.is_pinned)}
+              onValueChange={(val) => handleFilterChange('is_pinned', val === 'all' ? null : val === 'true')}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="true">Được ghim</SelectItem>
+                <SelectItem value="false">Thường</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Lọc thời gian tạo */}

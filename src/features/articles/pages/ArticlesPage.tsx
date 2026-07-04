@@ -48,7 +48,6 @@ const initialFilters: ArticleListParams = {
   author_id: null,
   tag_ids: null,
   status: null,
-  is_featured: null,
   is_pinned: null,
   is_draft: false, // Loại bỏ nháp khỏi danh sách chính
   created_from: null,
@@ -80,7 +79,6 @@ export function ArticlesPage() {
     const author_id = searchParams.get('author_id') || null
     const tag_ids = searchParams.get('tag_ids') ? searchParams.get('tag_ids')!.split(',') : null
     const status = (searchParams.get('status') as any) || null
-    const is_featured = searchParams.get('is_featured') === 'true' ? true : searchParams.get('is_featured') === 'false' ? false : null
     const is_pinned = searchParams.get('is_pinned') === 'true' ? true : searchParams.get('is_pinned') === 'false' ? false : null
     const is_draft = searchParams.get('is_draft') === 'true'
     const deleted = searchParams.get('deleted') === 'true'
@@ -97,7 +95,6 @@ export function ArticlesPage() {
       author_id,
       tag_ids,
       status,
-      is_featured,
       is_pinned,
       is_draft,
       deleted,
@@ -119,7 +116,6 @@ export function ArticlesPage() {
     if (nextFilters.author_id) params.author_id = nextFilters.author_id
     if (nextFilters.tag_ids && nextFilters.tag_ids.length > 0) params.tag_ids = nextFilters.tag_ids.join(',')
     if (nextFilters.status) params.status = nextFilters.status
-    if (nextFilters.is_featured !== null && nextFilters.is_featured !== undefined) params.is_featured = String(nextFilters.is_featured)
     if (nextFilters.is_pinned !== null && nextFilters.is_pinned !== undefined) params.is_pinned = String(nextFilters.is_pinned)
     if (nextFilters.is_draft) params.is_draft = 'true'
     if (nextFilters.deleted) params.deleted = 'true'
@@ -224,7 +220,7 @@ export function ArticlesPage() {
 
   // Mutation cập nhật nhanh thuộc tính bài viết (Ghim / Nổi bật)
   const toggleAttributeMutation = useMutation({
-    mutationFn: ({ id, attributes }: { id: string; attributes: { is_featured?: boolean; is_pinned?: boolean } }) =>
+    mutationFn: ({ id, attributes }: { id: string; attributes: { is_pinned?: boolean } }) =>
       articleService.updateAttributes(id, attributes),
     onSuccess: () => {
       toast.success('Cập nhật thuộc tính bài viết thành công.')

@@ -39,7 +39,7 @@ interface ArticleColumnsProps {
   onRestore: (id: string) => void
   onArchive: (id: string) => void
   onPublish: (id: string) => void
-  onToggleAttribute: (id: string, attributes: { is_featured?: boolean; is_pinned?: boolean }) => void
+  onToggleAttribute: (id: string, attributes: { is_pinned?: boolean }) => void
 }
 
 export const getArticleColumns = ({
@@ -247,15 +247,6 @@ export const getArticleColumns = ({
               className="scale-75 origin-left cursor-pointer"
             />
             <span className="text-[11px] font-semibold text-muted-foreground">Ghim</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Switch
-              checked={article.is_featured}
-              disabled={deleted}
-              onCheckedChange={(checked) => onToggleAttribute(article.id, { is_featured: checked })}
-              className="scale-75 origin-left cursor-pointer"
-            />
-            <span className="text-[11px] font-semibold text-muted-foreground">Nổi bật</span>
           </div>
         </div>
       )
