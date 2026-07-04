@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { httpClient } from '@/services/http/client'
+import logoDhVinh from '@/assets/logo-dhvinh.png'
 
 interface CommandPaletteProps {
   isOpen: boolean
@@ -337,6 +338,24 @@ export function CommandPalette({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl overflow-hidden p-0 border-border bg-background/80 backdrop-blur-lg shadow-2xl transition-all duration-300">
+        {/* Brand Header */}
+        <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/20">
+          <div className="flex items-center gap-2.5">
+            <img src={logoDhVinh} alt="Đại học Vinh Logo" className="h-6 w-6 object-contain" />
+            <div className="flex flex-col text-left">
+              <span className="text-[11px] font-bold tracking-tight text-foreground leading-tight">
+                ĐẠI HỌC VINH
+              </span>
+              <span className="text-[8px] text-muted-foreground font-mono leading-none">
+                CMS Search Portal
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider bg-card px-2 py-0.5 rounded border border-border/40">
+            Hộp lệnh nhanh
+          </span>
+        </div>
+
         {/* Search Input */}
         <div className="flex items-center border-b px-4 py-3.5">
           <Search className="mr-3 h-5 w-5 shrink-0 text-muted-foreground" />

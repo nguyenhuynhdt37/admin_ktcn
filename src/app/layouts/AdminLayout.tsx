@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuthStore, type User as AuthUser } from '@/stores/authStore'
 import { useTheme } from '@/app/providers/ThemeProvider'
+import { httpClient } from '@/services/http/client'
 import { Button } from '@/shared/components/ui/button'
 import {
   DropdownMenu,
@@ -251,9 +252,15 @@ export function AdminLayout() {
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
+  const handleLogout = async () => {
+    try {
+      await httpClient.post('/auth/logout')
+    } catch (err) {
+      console.error('Logout failed:', err)
+    } finally {
+      logout()
+      navigate('/login')
+    }
   }
 
   // Khai báo các phím tắt toàn hệ thống

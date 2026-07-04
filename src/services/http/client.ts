@@ -14,14 +14,14 @@ export const httpClient = axios.create({
 })
 
 let isRefreshing = false
-let failedQueue: { resolve: (token: string) => void; reject: (err: unknown) => void }[] = []
+let failedQueue: { resolve: () => void; reject: (err: unknown) => void }[] = []
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error: unknown) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error)
     } else {
-      prom.resolve(token!)
+      prom.resolve()
     }
   })
   failedQueue = []
@@ -29,10 +29,6 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 httpClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = useAuthStore.getState().token
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
     return config
   },
   (error) => {
@@ -68,13 +64,10 @@ httpClient.interceptors.response.use(
       // First time 401, check error code
       if (errorCode === 'EXPIRED_ACCESS_TOKEN') {
         if (isRefreshing) {
-          return new Promise<string>((resolve, reject) => {
+          return new Promise<void>((resolve, reject) => {
             failedQueue.push({ resolve, reject })
           })
-            .then((token) => {
-              if (originalRequest.headers) {
-                originalRequest.headers.Authorization = `Bearer ${token}`
-              }
+            .then(() => {
               return httpClient(originalRequest)
             })
             .catch((err) => Promise.reject(err))
@@ -84,23 +77,18 @@ httpClient.interceptors.response.use(
         isRefreshing = true
 
         try {
-          const refreshResponse = await axios.post(
+          await axios.post(
             `${env.VITE_API_URL}/auth/refresh`,
             {},
             { withCredentials: true, timeout: 10000 }
           )
-          const { access_token } = refreshResponse.data
 
-          useAuthStore.getState().setToken(access_token)
-          processQueue(null, access_token)
+          processQueue(null)
           isRefreshing = false
 
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access_token}`
-          }
           return httpClient(originalRequest)
         } catch (refreshError) {
-          processQueue(refreshError, null)
+          processQueue(refreshError)
           isRefreshing = false
           useAuthStore.getState().logout()
           window.location.href = '/login'
