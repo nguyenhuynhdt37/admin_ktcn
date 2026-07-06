@@ -139,6 +139,10 @@ export const router = createBrowserRouter([
         element: <ArticleDraftsPage />,
       },
       {
+        path: 'consultations',
+        element: <ConsultationsPage />,
+      },
+      {
         path: 'users',
         element: <UsersPage />,
       },
