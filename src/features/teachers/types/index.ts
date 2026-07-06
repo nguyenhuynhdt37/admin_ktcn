@@ -27,7 +27,9 @@ export interface Staff {
   english_name: string | null
   slug: string
   academic_title: string | null
+  academic_title_id: string | null
   degree: string | null
+  degree_id: string | null
   avatar_object_key: string | null
   email: string | null
   phone: string | null

@@ -69,7 +69,7 @@ export function useTagForm({ initialData, onSubmit }: UseTagFormProps) {
   const [lastTranslatedVi, setLastTranslatedVi] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const form = useForm<TagFormValues>({
+  const form: any = useForm<TagFormValues>({
     resolver: zodResolver(tagFormSchema),
     reValidateMode: 'onBlur',
     defaultValues: {
