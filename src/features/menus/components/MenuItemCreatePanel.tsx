@@ -188,7 +188,7 @@ export function MenuItemCreatePanel({
 
     const payload = {
       target_type: !targetType || targetType === 'NONE' ? null : targetType,
-      target_id: ['CATEGORY', 'ARTICLE', 'MODULE', 'DEPARTMENT'].includes(targetType || '') ? (targetId.trim() || null) : null,
+      target_id: ['CATEGORY', 'ARTICLE', 'PAGE', 'MODULE', 'DEPARTMENT'].includes(targetType || '') ? (targetId.trim() || null) : null,
       external_url: targetType === 'EXTERNAL_LINK' ? (externalUrl.trim() || null) : null,
       open_in_new_tab: openInNewTab,
       is_visible: isVisible,

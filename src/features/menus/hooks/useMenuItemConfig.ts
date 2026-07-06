@@ -302,7 +302,7 @@ export function useMenuItemConfig({
 
     const payload: MenuItemPayload = {
       target_type: form.target_type || null,
-      target_id: ['CATEGORY', 'ARTICLE', 'MODULE', 'DEPARTMENT'].includes(form.target_type || '') ? (form.target_id || null) : null,
+      target_id: ['CATEGORY', 'ARTICLE', 'PAGE', 'MODULE', 'DEPARTMENT'].includes(form.target_type || '') ? (form.target_id || null) : null,
       external_url: form.target_type === 'EXTERNAL_LINK' ? (form.external_url || null) : null,
       open_in_new_tab: form.open_in_new_tab,
       is_visible: form.is_visible,
