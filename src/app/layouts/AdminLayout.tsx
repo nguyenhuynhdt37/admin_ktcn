@@ -24,7 +24,6 @@ import {
   ChevronDown,
   User,
   Settings,
-  Bell,
   FileText,
   FolderOpen,
   Layers,
@@ -40,6 +39,7 @@ import {
   BrainCircuit,
   Fingerprint,
   Tag,
+  MessageSquareText,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -51,6 +51,7 @@ import { useHotkeys } from '@/shared/hooks/useHotkeys'
 import { CommandPalette } from '@/shared/components/CommandPalette'
 import { KeyboardShortcutsHelp } from '@/shared/components/KeyboardShortcutsHelp'
 import { getModifierKey, getAltKey } from '@/shared/utils/os'
+import { AdminNotificationBell } from '@/features/notifications/components/AdminNotificationBell'
 
 interface NavItem {
   label: string
@@ -123,7 +124,7 @@ function SidebarNavItem({ item, onClose }: SidebarNavItemProps) {
       {isOpen && (
         <div className="mt-0.5 mx-2 mb-1">
           <div className="relative pl-3 border-l border-border/50">
-            {item.children.map((child) => (
+            {item.children?.map((child) => (
               <NavLink
                 key={child.href}
                 to={child.href}
@@ -171,6 +172,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'menu.dashboard' },
     { type: 'separator' },
     { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' },
+    { label: 'Tư vấn tuyển sinh', href: '/consultations', icon: MessageSquareText, permission: null },
     { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
     { label: 'Thẻ (Tag)', href: '/tags', icon: Tag, permission: null },
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
@@ -345,11 +347,7 @@ export function AdminLayout() {
               <span className="sr-only">Chuyển giao diện</span>
             </Button>
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-destructive" />
-              <span className="sr-only">Thông báo</span>
-            </Button>
+            <AdminNotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

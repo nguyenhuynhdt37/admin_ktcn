@@ -33,6 +33,7 @@ import ArticleEditPage from '@/features/articles/pages/ArticleEditPage'
 import ArticleDetailPage from '@/features/articles/pages/ArticleDetailPage'
 import { ArticleDraftsPage } from '@/features/articles/pages/ArticleDraftsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
+import { ConsultationsPage } from '@/features/consultations/pages/ConsultationsPage'
 import { Button } from '@/shared/components/ui/button'
 import { Link } from 'react-router'
 
@@ -136,6 +137,10 @@ export const router = createBrowserRouter([
       {
         path: 'articles/drafts',
         element: <ArticleDraftsPage />,
+      },
+      {
+        path: 'consultations',
+        element: <ConsultationsPage />,
       },
       {
         path: 'users',
