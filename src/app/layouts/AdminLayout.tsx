@@ -40,6 +40,7 @@ import {
   BrainCircuit,
   Fingerprint,
   Tag,
+  PhoneCall,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -174,6 +175,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
     { label: 'Thẻ (Tag)', href: '/tags', icon: Tag, permission: null },
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
+    { label: 'Yêu cầu tư vấn', href: '/consultations', icon: PhoneCall, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
     { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
 
