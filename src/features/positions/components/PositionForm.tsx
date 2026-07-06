@@ -76,7 +76,7 @@ export function PositionForm({
   const [isTranslating, setIsTranslating] = useState(false)
   const [lastTranslatedVi, setLastTranslatedVi] = useState('')
 
-  const form = useForm<PositionFormValues>({
+  const form: any = useForm<PositionFormValues>({
     resolver: positionFormResolver,
     reValidateMode: 'onBlur',
     defaultValues: {
