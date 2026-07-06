@@ -357,7 +357,7 @@ function TeacherFormInner({
 
   const isEditMode = !!teacherId
 
-  const form = useForm<TeacherFormValues>({
+  const form: any = useForm<TeacherFormValues>({
     resolver: teacherFormResolver,
     reValidateMode: 'onBlur',
     defaultValues: initialValues

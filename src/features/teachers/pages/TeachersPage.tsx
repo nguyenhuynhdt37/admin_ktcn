@@ -553,13 +553,13 @@ export function TeachersPage() {
             totalCount={staffData.total_items}
             pageCount={staffData.total_pages}
             pageIndex={pagination.pageIndex}
-            onPageChange={(pageIndex) => setPagination((p) => ({ ...p, pageIndex }))}
+            onPageChange={(pageIndex) => setPagination((p: { pageIndex: number; pageSize: number }) => ({ ...p, pageIndex }))}
             isLoading={isLoading || isFetching}
             sorting={sorting}
             onSortingChange={setSorting}
             rowSelection={rowSelection}
             onRowSelectionChange={setRowSelection}
-            onPageSizeChange={(pageSize) => setPagination((p) => ({ ...p, pageSize, pageIndex: 0 }))}
+            onPageSizeChange={(pageSize) => setPagination((p: { pageIndex: number; pageSize: number }) => ({ ...p, pageSize, pageIndex: 0 }))}
           />
         </div>
       )}

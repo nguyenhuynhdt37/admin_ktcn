@@ -123,3 +123,17 @@ export interface StaffStats {
   positions: StatDetail
   staffs: StatDetail
 }
+
+export interface AcademicTitle {
+  id: string
+  name: string
+  is_active: boolean
+  sort_order: number
+}
+
+export interface Degree {
+  id: string
+  name: string
+  is_active: boolean
+  sort_order: number
+}
