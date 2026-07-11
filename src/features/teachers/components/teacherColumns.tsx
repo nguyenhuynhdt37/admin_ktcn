@@ -213,15 +213,37 @@ export const getTeacherColumns = ({
   },
   {
     accessorKey: 'is_active',
-    header: () => <div className="text-center">Trạng thái</div>,
+    header: () => <div>Xuất bản</div>,
     cell: ({ row }) => {
       const item = row.original
+      const statusLabels = {
+        imported: 'Mới nhập',
+        pending_review: 'Chờ rà soát',
+        completed: 'Đã hoàn thiện',
+        published: 'Đã xuất bản',
+      }
       return (
-        <div className="flex items-center justify-center">
+        <div className="flex min-w-[120px] flex-col items-start gap-1.5">
+          <Badge
+            variant="outline"
+            className={cn(
+              'rounded px-1.5 py-0 text-[9px] font-semibold',
+              item.profile_status === 'published' && 'border-emerald-200 bg-emerald-50 text-emerald-700',
+              item.profile_status === 'completed' && 'border-blue-200 bg-blue-50 text-blue-700',
+              item.profile_status === 'pending_review' && 'border-amber-200 bg-amber-50 text-amber-700',
+              item.profile_status === 'imported' && 'border-slate-200 bg-slate-50 text-slate-600'
+            )}
+          >
+            {statusLabels[item.profile_status]}
+          </Badge>
+          <span className={cn('text-[10px] font-medium', item.is_visible ? 'text-emerald-700' : 'text-muted-foreground')}>
+            {item.is_visible ? 'Đang công khai' : 'Chưa công khai'}
+          </span>
           <Switch
             checked={item.is_active}
             onCheckedChange={(checked) => onToggleStatus(item.id, checked)}
             className="scale-75 cursor-pointer"
+            aria-label={`Trạng thái hoạt động của ${item.full_name}`}
           />
         </div>
       )

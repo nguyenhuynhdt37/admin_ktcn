@@ -84,6 +84,14 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
 
     categoryId,
     setCategoryId,
+    departmentId,
+    setDepartmentId,
+    programId,
+    setProgramId,
+    articleType,
+    setArticleType,
+    departments,
+    programs,
     tagIds,
     setTagIds,
     status,
@@ -438,6 +446,14 @@ export function ArticleForm({ articleId, showDraftsFeature = true }: ArticleForm
               categoryId={categoryId}
               setCategoryId={setCategoryId}
               isCategoriesLoading={isCategoriesLoading}
+              departments={departments}
+              departmentId={departmentId}
+              setDepartmentId={setDepartmentId}
+              programs={programs}
+              programId={programId}
+              setProgramId={setProgramId}
+              articleType={articleType}
+              setArticleType={setArticleType}
               tags={tags}
               tagIds={tagIds}
               setTagIds={setTagIds}

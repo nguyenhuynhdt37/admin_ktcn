@@ -24,7 +24,10 @@ export interface Staff {
   department_id: string
   position_id: string
   full_name: string
+  normalized_full_name: string | null
   english_name: string | null
+  date_of_birth: string | null
+  gender: string | null
   slug: string
   academic_title: string | null
   academic_title_id: string | null
@@ -39,6 +42,12 @@ export interface Staff {
   research_interests: string | null
   sort_order: number
   is_active: boolean
+  profile_status: 'imported' | 'pending_review' | 'completed' | 'published'
+  is_visible: boolean
+  note: string | null
+  source_type: string | null
+  source_note: string | null
+  source_file_id: string | null
   is_translated: Record<string, boolean>
   translations: Record<string, StaffTranslation>
   created_at: string
@@ -52,6 +61,8 @@ export interface CreateStaffPayload {
   position_id: string
   full_name: string
   english_name?: string | null
+  date_of_birth?: string | null
+  gender?: string | null
   avatar_object_key?: string | null
   email?: string | null
   phone?: string | null
@@ -59,6 +70,9 @@ export interface CreateStaffPayload {
   office?: string | null
   sort_order?: number
   is_active?: boolean
+  profile_status?: Staff['profile_status']
+  is_visible?: boolean
+  note?: string | null
   translations: Record<string, {
     academic_title?: string | null
     degree?: string | null
@@ -72,6 +86,8 @@ export interface UpdateStaffPayload {
   position_id?: string
   full_name?: string
   english_name?: string | null
+  date_of_birth?: string | null
+  gender?: string | null
   avatar_object_key?: string | null
   email?: string | null
   phone?: string | null
@@ -79,6 +95,9 @@ export interface UpdateStaffPayload {
   office?: string | null
   sort_order?: number
   is_active?: boolean
+  profile_status?: Staff['profile_status']
+  is_visible?: boolean
+  note?: string | null
   translations?: Record<string, {
     academic_title?: string | null
     degree?: string | null
@@ -100,6 +119,8 @@ export interface StaffListParams {
   academic_title_id?: string | null
   degree_id?: string | null
   is_active?: boolean | null
+  profile_status?: Staff['profile_status'] | null
+  is_visible?: boolean | null
   sort_by?: 'full_name' | 'sort_order' | 'created_at'
   order?: 'asc' | 'desc'
 }

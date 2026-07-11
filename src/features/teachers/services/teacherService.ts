@@ -28,9 +28,17 @@ export const teacherService = {
     if (cleanedParams.academic_title_id === null || cleanedParams.academic_title_id === 'all') delete cleanedParams.academic_title_id
     if (cleanedParams.degree_id === null || cleanedParams.degree_id === 'all') delete cleanedParams.degree_id
     if (cleanedParams.is_active === null) delete cleanedParams.is_active
+    if (cleanedParams.profile_status === null) delete cleanedParams.profile_status
+    if (cleanedParams.is_visible === null) delete cleanedParams.is_visible
 
     const response = await httpClient.get<StaffPagination>('/admin/staffs', { params: cleanedParams })
-    return response.data
+    const data = response.data as StaffPagination & { total?: number }
+    return {
+      ...data,
+      total_items: data.total_items ?? data.total ?? 0,
+      has_next: data.has_next ?? data.page < data.total_pages,
+      has_previous: data.has_previous ?? data.page > 1,
+    }
   },
 
   /** Lấy chi tiết giảng viên theo ID */

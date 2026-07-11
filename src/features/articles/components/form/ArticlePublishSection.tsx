@@ -5,6 +5,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { AutocompleteSelect } from '../AutocompleteSelect'
 import { Input } from '@/shared/components/ui/input'
 import type { CategorySearchItem, TagSearchItem } from '../../types/articles.types'
+import type { Department } from '@/features/departments/types'
+import type { Program } from '@/features/academic-content/services/academicContentService'
 import { Calendar } from 'lucide-react'
 
 interface ArticlePublishSectionProps {
@@ -13,6 +15,14 @@ interface ArticlePublishSectionProps {
   categoryId: string
   setCategoryId: (value: string) => void
   isCategoriesLoading?: boolean
+  departments: Department[]
+  departmentId: string
+  setDepartmentId: (value: string) => void
+  programs: Program[]
+  programId: string
+  setProgramId: (value: string) => void
+  articleType: 'news' | 'announcement' | 'event' | 'research' | 'admission'
+  setArticleType: (value: 'news' | 'announcement' | 'event' | 'research' | 'admission') => void
 
   // Tags
   tags: TagSearchItem[]
@@ -42,6 +52,14 @@ export function ArticlePublishSection({
   categoryId,
   setCategoryId,
   isCategoriesLoading = false,
+  departments,
+  departmentId,
+  setDepartmentId,
+  programs,
+  programId,
+  setProgramId,
+  articleType,
+  setArticleType,
 
   tags,
   tagIds,
@@ -107,6 +125,24 @@ export function ArticlePublishSection({
             <p className="text-xs text-destructive font-medium mt-1 animate-fade-in">{errors.categoryId}</p>
           )}
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold">Loại bài</Label>
+            <Select value={articleType} onValueChange={(value) => setArticleType(value as typeof articleType)} disabled={disabled}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="news">Tin tức</SelectItem><SelectItem value="announcement">Thông báo</SelectItem><SelectItem value="event">Sự kiện</SelectItem><SelectItem value="research">Nghiên cứu</SelectItem><SelectItem value="admission">Tuyển sinh</SelectItem></SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold">Đơn vị liên quan</Label>
+            <Select value={departmentId || 'none'} onValueChange={(value) => { setDepartmentId(value === 'none' ? '' : value); setProgramId('') }} disabled={disabled}>
+              <SelectTrigger><SelectValue placeholder="Không gắn đơn vị" /></SelectTrigger>
+              <SelectContent><SelectItem value="none">Không gắn đơn vị</SelectItem>{departments.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </div>
+        {departmentId && programs.length > 0 && <div className="space-y-2"><Label className="text-xs font-semibold">Chương trình đào tạo</Label><Select value={programId || 'none'} onValueChange={(value) => setProgramId(value === 'none' ? '' : value)} disabled={disabled}><SelectTrigger><SelectValue placeholder="Không gắn chương trình" /></SelectTrigger><SelectContent><SelectItem value="none">Không gắn chương trình</SelectItem>{programs.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select></div>}
 
         {/* Tags selection */}
         <div className="space-y-2">

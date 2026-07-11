@@ -23,7 +23,13 @@ export const departmentService = {
     if (cleanedParams.is_active === null) delete cleanedParams.is_active
 
     const response = await httpClient.get('/admin/departments', { params: cleanedParams })
-    return response.data
+    const data = response.data as DepartmentPagination & { total?: number }
+    return {
+      ...data,
+      total_items: data.total_items ?? data.total ?? 0,
+      has_next: data.has_next ?? data.page < data.total_pages,
+      has_previous: data.has_previous ?? data.page > 1,
+    }
   },
 
   /** Lấy chi tiết bộ môn theo ID */

@@ -40,6 +40,7 @@ import {
   Fingerprint,
   Tag,
   MessageSquareText,
+  BookOpen,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -189,6 +190,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
       permission: null,
       children: [
         { label: 'Bộ môn', href: '/departments', icon: Award },
+        { label: 'Đào tạo & hình ảnh', href: '/academic-content', icon: BookOpen },
         { label: 'Chức vụ', href: '/positions', icon: Briefcase },
         { label: 'Giảng viên', href: '/teachers', icon: GraduationCap },
       ]

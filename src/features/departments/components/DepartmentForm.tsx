@@ -15,6 +15,7 @@ import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Switch } from '@/shared/components/ui/switch'
 import { Button } from '@/shared/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Label } from '@/shared/components/ui/label'
 import {
   Card,
@@ -42,11 +43,16 @@ const translationSchema = z.object({
     .max(1000, { message: 'Mô tả không vượt quá 1000 ký tự' })
     .optional()
     .or(z.literal('')),
+  short_description: z.string().trim().max(300).optional().or(z.literal('')),
+  mission: z.string().trim().max(2000).optional().or(z.literal('')),
+  vision: z.string().trim().max(2000).optional().or(z.literal('')),
 })
 
 const departmentFormSchema = z.object({
-  thumbnail_object_key: z.string()
-    .min(1, { message: 'Ảnh đại diện bộ môn là bắt buộc' }),
+  code: z.string().trim().max(50).optional().or(z.literal('')),
+  unit_type: z.enum(['school', 'faculty', 'department', 'office', 'center', 'lab']).default('department'),
+  content_status: z.enum(['draft', 'review', 'published']).default('draft'),
+  thumbnail_object_key: z.string().optional().or(z.literal('')),
   phone: z.string()
     .trim()
     .max(50, { message: 'Số điện thoại không vượt quá 50 ký tự' })
@@ -117,6 +123,9 @@ export function DepartmentForm({
     resolver: departmentFormResolver,
     reValidateMode: 'onBlur',
     defaultValues: {
+      code: '',
+      unit_type: 'department',
+      content_status: 'draft',
       thumbnail_object_key: '',
       phone: '',
       email: '',
@@ -125,8 +134,8 @@ export function DepartmentForm({
       sort_order: 0,
       is_active: true,
       translations: {
-        vi: { name: '', description: '' },
-        en: { name: '', description: '' }
+        vi: { name: '', description: '', short_description: '', mission: '', vision: '' },
+        en: { name: '', description: '', short_description: '', mission: '', vision: '' }
       }
     },
   })
@@ -135,6 +144,9 @@ export function DepartmentForm({
   useEffect(() => {
     if (initialData) {
       form.reset({
+        code: initialData.code || '',
+        unit_type: initialData.unit_type || 'department',
+        content_status: initialData.content_status || 'draft',
         thumbnail_object_key: initialData.thumbnail_object_key || '',
         phone: initialData.phone || '',
         email: initialData.email || '',
@@ -146,10 +158,16 @@ export function DepartmentForm({
           vi: {
             name: initialData.translations?.vi?.name || initialData.name || '',
             description: initialData.translations?.vi?.description || initialData.description || '',
+            short_description: initialData.translations?.vi?.short_description || '',
+            mission: initialData.translations?.vi?.mission || '',
+            vision: initialData.translations?.vi?.vision || '',
           },
           en: {
             name: initialData.translations?.en?.name || '',
             description: initialData.translations?.en?.description || '',
+            short_description: initialData.translations?.en?.short_description || '',
+            mission: initialData.translations?.en?.mission || '',
+            vision: initialData.translations?.en?.vision || '',
           }
         }
       })
@@ -163,6 +181,9 @@ export function DepartmentForm({
       }
     } else {
       form.reset({
+        code: '',
+        unit_type: 'department',
+        content_status: 'draft',
         thumbnail_object_key: '',
         phone: '',
         email: '',
@@ -171,8 +192,8 @@ export function DepartmentForm({
         sort_order: 0,
         is_active: true,
         translations: {
-          vi: { name: '', description: '' },
-          en: { name: '', description: '' }
+          vi: { name: '', description: '', short_description: '', mission: '', vision: '' },
+          en: { name: '', description: '', short_description: '', mission: '', vision: '' }
         }
       })
       setLastTranslatedVi('')
@@ -303,6 +324,9 @@ export function DepartmentForm({
   const handleFormSubmit = (data: DepartmentFormValues) => {
     // Tiếng Anh hiện tại cũng bắt buộc theo yêu cầu người dùng
     const payload = {
+      code: data.code?.trim() || null,
+      unit_type: data.unit_type,
+      content_status: data.content_status,
       thumbnail_object_key: data.thumbnail_object_key,
       phone: data.phone?.trim() || null,
       email: data.email?.trim() || null,
@@ -311,14 +335,20 @@ export function DepartmentForm({
       sort_order: data.sort_order,
       is_active: data.is_active,
       translations: {
-        vi: {
-          name: data.translations.vi.name.trim(),
-          description: data.translations.vi.description?.trim() || null
-        },
-        en: {
-          name: data.translations.en.name.trim(),
-          description: data.translations.en.description?.trim() || null
-        }
+          vi: {
+            name: data.translations.vi.name.trim(),
+            description: data.translations.vi.description?.trim() || null,
+            short_description: data.translations.vi.short_description?.trim() || null,
+            mission: data.translations.vi.mission?.trim() || null,
+            vision: data.translations.vi.vision?.trim() || null,
+          },
+          en: {
+            name: data.translations.en.name.trim(),
+            description: data.translations.en.description?.trim() || null,
+            short_description: data.translations.en.short_description?.trim() || null,
+            mission: data.translations.en.mission?.trim() || null,
+            vision: data.translations.en.vision?.trim() || null,
+          }
       }
     }
     onSubmit(payload)
@@ -408,6 +438,42 @@ export function DepartmentForm({
               )}
             </div>
 
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold">Mã đơn vị</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ví dụ: KCNTT" className="h-9 bg-background text-xs font-mono" {...field} />
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="unit_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold">Loại đơn vị</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger className="h-9 bg-background text-xs"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="faculty">Khoa</SelectItem>
+                        <SelectItem value="department">Bộ môn</SelectItem>
+                        <SelectItem value="office">Văn phòng</SelectItem>
+                        <SelectItem value="center">Trung tâm</SelectItem>
+                        <SelectItem value="lab">Phòng thí nghiệm</SelectItem>
+                        <SelectItem value="school">Trường</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* Nội dung Đa Ngôn Ngữ */}
             <div className="space-y-3 border border-border/80 p-3.5 rounded-xl bg-muted/5 relative">
               <div className="flex items-center justify-between border-b pb-2">
@@ -489,6 +555,24 @@ export function DepartmentForm({
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name={`translations.${activeTab}.short_description`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">Giới thiệu ngắn ({activeTab.toUpperCase()})</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Nội dung tóm tắt dùng ở đầu trang khoa..."
+                          className="min-h-[70px] resize-none bg-background text-xs leading-relaxed"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Mô tả */}
                 <FormField
                   control={form.control}
@@ -507,6 +591,29 @@ export function DepartmentForm({
                     </FormItem>
                   )}
                 />
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name={`translations.${activeTab}.mission`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Sứ mạng ({activeTab.toUpperCase()})</FormLabel>
+                        <FormControl><Textarea className="min-h-[90px] resize-none bg-background text-xs" {...field} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`translations.${activeTab}.vision`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Tầm nhìn ({activeTab.toUpperCase()})</FormLabel>
+                        <FormControl><Textarea className="min-h-[90px] resize-none bg-background text-xs" {...field} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
 
@@ -616,6 +723,24 @@ export function DepartmentForm({
             />
 
             {/* Trạng thái hoạt động */}
+            <FormField
+              control={form.control}
+              name="content_status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold">Trạng thái nội dung</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger className="h-9 bg-background text-xs"><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="draft">Bản nháp</SelectItem>
+                      <SelectItem value="review">Chờ duyệt</SelectItem>
+                      <SelectItem value="published">Đã xuất bản</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="is_active"

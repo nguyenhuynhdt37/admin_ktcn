@@ -34,6 +34,7 @@ import ArticleDetailPage from '@/features/articles/pages/ArticleDetailPage'
 import { ArticleDraftsPage } from '@/features/articles/pages/ArticleDraftsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { ConsultationsPage } from '@/features/consultations/pages/ConsultationsPage'
+import { AcademicContentPage } from '@/features/academic-content/pages/AcademicContentPage'
 import { Button } from '@/shared/components/ui/button'
 import { Link } from 'react-router'
 
@@ -93,6 +94,10 @@ export const router = createBrowserRouter([
       {
         path: 'departments',
         element: <DepartmentsPage />,
+      },
+      {
+        path: 'academic-content',
+        element: <AcademicContentPage />,
       },
       {
         path: 'tags',

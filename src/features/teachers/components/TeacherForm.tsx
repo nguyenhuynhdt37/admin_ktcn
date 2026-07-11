@@ -51,11 +51,10 @@ const teacherFormSchema = z.object({
     .trim()
     .min(1, { message: 'Họ và tên là bắt buộc' })
     .max(150, { message: 'Họ và tên không vượt quá 150 ký tự' }),
-  english_name: z.string()
-    .trim()
-    .min(1, { message: 'Tên tiếng Anh là bắt buộc' })
-    .max(150, { message: 'Tên tiếng Anh không vượt quá 150 ký tự' }),
-  avatar_object_key: z.string().min(1, { message: 'Vui lòng tải lên ảnh đại diện' }),
+  english_name: z.string().trim().max(150, { message: 'Tên tiếng Anh không vượt quá 150 ký tự' }).optional().or(z.literal('')),
+  date_of_birth: z.string().nullable().optional().or(z.literal('')),
+  gender: z.string().nullable().optional().or(z.literal('')),
+  avatar_object_key: z.string().optional().or(z.literal('')),
   email: z.string()
     .trim()
     .max(100, { message: 'Email liên hệ không vượt quá 100 ký tự' })
@@ -90,6 +89,9 @@ const teacherFormSchema = z.object({
     z.number().min(0, { message: 'Thứ tự sắp xếp phải lớn hơn hoặc bằng 0' })
   ),
   is_active: z.boolean().default(true),
+  profile_status: z.enum(['imported', 'pending_review', 'completed', 'published']).default('pending_review'),
+  is_visible: z.boolean().default(false),
+  note: z.string().max(2000, { message: 'Ghi chú không vượt quá 2000 ký tự' }).optional().or(z.literal('')),
   translations: z.object({
     vi: translationSchema,
     en: translationSchema,
@@ -113,6 +115,8 @@ function mapBackendToForm(detail: any): TeacherFormValues {
     degree_id: detail.degree_id || '',
     full_name: detail.full_name || '',
     english_name: detail.english_name || '',
+    date_of_birth: detail.date_of_birth || '',
+    gender: detail.gender || '',
     avatar_object_key: detail.avatar_object_key || '',
     email: detail.email || '',
     phone: detail.phone || '',
@@ -120,6 +124,9 @@ function mapBackendToForm(detail: any): TeacherFormValues {
     office: detail.office || '',
     sort_order: detail.sort_order || 0,
     is_active: detail.is_active !== undefined ? detail.is_active : true,
+    profile_status: detail.profile_status || 'pending_review',
+    is_visible: detail.is_visible === true,
+    note: detail.note || '',
     translations: {
       vi: {
         biography: detail.translations?.vi?.biography || detail.biography || '',
@@ -142,6 +149,8 @@ function getCreateDefaultValues(): TeacherFormValues {
     degree_id: '',
     full_name: '',
     english_name: '',
+    date_of_birth: '',
+    gender: '',
     avatar_object_key: '',
     email: '',
     phone: '',
@@ -149,6 +158,9 @@ function getCreateDefaultValues(): TeacherFormValues {
     office: '',
     sort_order: 0,
     is_active: true,
+    profile_status: 'pending_review',
+    is_visible: false,
+    note: '',
     translations: {
       vi: { biography: '', research_interests: '' },
       en: { biography: '', research_interests: '' }
@@ -312,7 +324,9 @@ function mapFormToPayload(values: TeacherFormValues) {
     academic_title_id: values.academic_title_id || null,
     degree_id: values.degree_id || null,
     full_name: values.full_name.trim(),
-    english_name: values.english_name.trim(),
+    english_name: values.english_name?.trim() || null,
+    date_of_birth: values.date_of_birth || null,
+    gender: values.gender || null,
     avatar_object_key: values.avatar_object_key,
     email: values.email ? values.email.trim() : null,
     phone: values.phone ? values.phone.trim() : null,
@@ -320,6 +334,9 @@ function mapFormToPayload(values: TeacherFormValues) {
     office: values.office ? values.office.trim() : null,
     sort_order: values.sort_order,
     is_active: values.is_active,
+    profile_status: values.profile_status,
+    is_visible: values.is_visible,
+    note: values.note?.trim() || null,
     translations: {
       vi: {
         biography: values.translations.vi.biography?.trim() || null,
@@ -624,6 +641,46 @@ function TeacherFormInner({
                         <FormControl>
                           <Input placeholder="Ví dụ: Nguyen Van A" className="text-xs focus-visible:ring-primary/20 h-9 bg-background" {...field} />
                         </FormControl>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="date_of_birth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Ngày sinh</FormLabel>
+                        <FormControl>
+                          <Input type="date" className="text-xs focus-visible:ring-primary/20 h-9 bg-background" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription className="text-[10px]">Chỉ dùng trong quản trị, không hiển thị trên portal.</FormDescription>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold">Giới tính</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
+                              <SelectValue placeholder="Chưa cập nhật" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="nam" className="text-xs">Nam</SelectItem>
+                            <SelectItem value="nu" className="text-xs">Nữ</SelectItem>
+                            <SelectItem value="khac" className="text-xs">Khác</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
@@ -1046,6 +1103,30 @@ function TeacherFormInner({
                 <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-800">Cấu hình & Sắp xếp</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="profile_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">Tiến độ hồ sơ</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="text-xs h-9 bg-background focus:ring-primary/20">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="imported" className="text-xs">Mới nhập từ quyết định</SelectItem>
+                          <SelectItem value="pending_review" className="text-xs">Chờ rà soát</SelectItem>
+                          <SelectItem value="completed" className="text-xs">Đã hoàn thiện</SelectItem>
+                          <SelectItem value="published" className="text-xs">Đã xuất bản</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Thứ tự sắp xếp */}
                 <FormField
                   control={form.control}
@@ -1064,13 +1145,31 @@ function TeacherFormInner({
                 {/* Trạng thái hoạt động */}
                 <FormField
                   control={form.control}
+                  name="is_visible"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3.5 bg-muted/10">
+                      <div className="space-y-0.5 pr-3">
+                        <FormLabel className="text-xs font-semibold">Hiển thị công khai</FormLabel>
+                        <FormDescription className="text-[10px] leading-relaxed text-muted-foreground/80">
+                          Cho phép hồ sơ xuất hiện trên website sau khi đã rà soát.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} className="scale-75 cursor-pointer" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="is_active"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3.5 bg-muted/10">
                       <div className="space-y-0.5">
                         <FormLabel className="text-xs font-semibold">Trạng thái hoạt động</FormLabel>
                         <FormDescription className="text-[10px] leading-relaxed text-muted-foreground/80">
-                          Cho phép giảng viên hoạt động và hiển thị trên cổng thông tin.
+                          Giữ hồ sơ trong hệ thống và cho phép quản trị cập nhật.
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -1080,6 +1179,25 @@ function TeacherFormInner({
                           className="scale-75 cursor-pointer"
                         />
                       </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="note"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">Ghi chú nội bộ</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Thông tin cần bổ sung hoặc kiểm tra..."
+                          className="min-h-[84px] resize-none text-xs bg-background"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-[10px]" />
                     </FormItem>
                   )}
                 />

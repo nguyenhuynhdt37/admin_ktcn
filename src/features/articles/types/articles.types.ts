@@ -46,6 +46,9 @@ export interface ArticleTranslation {
 export interface Article {
   id: string
   category_id: string
+  department_id?: string | null
+  program_id?: string | null
+  article_type?: 'news' | 'announcement' | 'event' | 'research' | 'admission'
   author_id: string
   thumbnail_object_key?: string | null
   cover_object_key?: string | null
@@ -167,6 +170,9 @@ export interface BulkStatusResponse {
 
 export interface ArticleCreatePayload {
   category_id?: string | null
+  department_id?: string | null
+  program_id?: string | null
+  article_type?: 'news' | 'announcement' | 'event' | 'research' | 'admission'
   tag_ids?: string[] | null
   status?: 'PUBLISHED' | 'SCHEDULED' | 'ARCHIVED'
   is_draft: boolean // Thêm trường phân tách bản nháp

@@ -9,6 +9,8 @@ import { SEO_CONFIG } from '../constants'
 import { generateSeoTitle, generateSeoDescription } from '@/shared/utils/seo'
 import type { ArticleCreatePayload } from '../types/articles.types'
 import { httpClient } from '@/services/http/client'
+import { departmentService } from '@/features/departments/services/departmentService'
+import { academicContentService } from '@/features/academic-content/services/academicContentService'
 
 function generateSlug(text: string): string {
   return text
@@ -130,6 +132,9 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
 
   // --- CẤU HÌNH CHUNG ---
   const [categoryId, setCategoryId] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+  const [programId, setProgramId] = useState('')
+  const [articleType, setArticleType] = useState<'news' | 'announcement' | 'event' | 'research' | 'admission'>('news')
   const [tagIds, setTagIds] = useState<string[]>([])
   const [status, setStatus] = useState<'PUBLISHED' | 'SCHEDULED'>('PUBLISHED')
   const [publishAt, setPublishAt] = useState('')
@@ -165,6 +170,14 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   const { data: tags = [], isLoading: isTagsLoading } = useQuery({
     queryKey: ['tags', 'all'],
     queryFn: articleService.listTags,
+  })
+  const { data: departmentData } = useQuery({
+    queryKey: ['departments', 'article-form'],
+    queryFn: () => departmentService.list({ page_size: 1000 }),
+  })
+  const { data: programData } = useQuery({
+    queryKey: ['programs', 'article-form', departmentId],
+    queryFn: () => academicContentService.listPrograms(departmentId || undefined),
   })
 
   // Fetch Article detail in Edit Mode
@@ -234,6 +247,9 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
 
       // Các trường chung
       setCategoryId(articleDetail.category_id || articleDetail.category?.id || '')
+      setDepartmentId(articleDetail.department_id || '')
+      setProgramId(articleDetail.program_id || '')
+      setArticleType(articleDetail.article_type || 'news')
       setTagIds(articleDetail.tags?.map((t) => t.id) || [])
       
       const dbStatus = articleDetail.status
@@ -667,6 +683,9 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
 
     const payload: ArticleCreatePayload = {
       category_id: categoryId || null,
+      department_id: departmentId || null,
+      program_id: programId || null,
+      article_type: articleType,
       tag_ids: tagIds.length > 0 ? tagIds : [],
       status: status,
       is_draft: true,
@@ -756,6 +775,9 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
 
     const payload: ArticleCreatePayload = {
       category_id: categoryId || null,
+      department_id: departmentId || null,
+      program_id: programId || null,
+      article_type: articleType,
       tag_ids: tagIds.length > 0 ? tagIds : [],
       status: status,
       is_draft: false,
@@ -877,6 +899,14 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
 
     categoryId,
     setCategoryId,
+    departmentId,
+    setDepartmentId,
+    programId,
+    setProgramId,
+    articleType,
+    setArticleType,
+    departments: departmentData?.items ?? [],
+    programs: programData?.items ?? [],
     tagIds,
     setTagIds,
     status,
