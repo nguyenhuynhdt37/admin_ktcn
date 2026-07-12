@@ -24,21 +24,25 @@ export const CmsEditor = memo(function CmsEditor({
   maxHeight = 600,
 }: CmsEditorProps) {
   const editorRef = useRef<any>(null)
+  const lastValueRef = useRef(value)
+
   // Sync outside changes (like translations or form loads) to avoid cursor jumping
   useEffect(() => {
     if (editorRef.current) {
       const safeValue = value || ''
-      // Chỉ đồng bộ khi editor KHÔNG có focus (thay đổi từ nút bấm bên ngoài hoặc load dữ liệu)
-      if (!editorRef.current.hasFocus()) {
+      // Chỉ đồng bộ khi giá trị prop thay đổi từ bên ngoài (khác với giá trị ta vừa gõ)
+      if (safeValue !== lastValueRef.current) {
         const currentContent = editorRef.current.getContent()
         if (safeValue !== currentContent) {
           editorRef.current.setContent(safeValue)
         }
+        lastValueRef.current = safeValue
       }
     }
   }, [value])
 
   const handleEditorChange = (content: string) => {
+    lastValueRef.current = content
     onChange?.(content)
   }
 
@@ -60,6 +64,7 @@ export const CmsEditor = memo(function CmsEditor({
         tinymceScriptSrc="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1/tinymce.min.js"
         onInit={(_evt, editor) => {
           editorRef.current = editor
+          lastValueRef.current = value
           if (value && editor.getContent() !== value) {
             editor.setContent(value)
           }
