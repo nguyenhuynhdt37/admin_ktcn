@@ -1,5 +1,7 @@
 import { useRef, memo } from 'react'
 import { Editor } from '@tinymce/tinymce-react'
+import { httpClient } from '@/services/http/client'
+import { getMediaUrl } from '@/features/articles/utils/media'
 
 interface CmsEditorProps {
   /** Nội dung HTML */
@@ -68,13 +70,26 @@ export const CmsEditor = memo(function CmsEditor({
           placeholder: placeholder || 'Nhập nội dung...',
           branding: false,
           promotion: false,
-          // Support image/file drag and drop & copy-paste as Base64 automatically
-          images_upload_handler: (blobInfo) => new Promise((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.readAsDataURL(blobInfo.blob())
+          // Upload dragged/pasted images directly to MinIO backend
+          images_upload_handler: (blobInfo) => new Promise(async (resolve, reject) => {
+            try {
+              const formData = new FormData()
+              formData.append('file', blobInfo.blob(), blobInfo.filename())
+
+              const { data } = await httpClient.post<{ object_key: string }>('/admin/media/upload', formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+              })
+
+              const fullUrl = getMediaUrl(data.object_key)
+              resolve(fullUrl)
+            } catch (error) {
+              console.error('TinyMCE image upload failed:', error)
+              reject('Tải hình ảnh lên thất bại')
+            }
           }),
-          // Support custom file upload (PDF, word docs, etc.) via link dialog
+          // Upload links/files (PDF, word docs) directly to MinIO backend via link dialog
           file_picker_callback: function (cb, _value, meta) {
             const input = document.createElement('input')
             input.setAttribute('type', 'file')
@@ -87,15 +102,26 @@ export const CmsEditor = memo(function CmsEditor({
               input.setAttribute('accept', '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx')
             }
 
-            input.onchange = function () {
+            input.onchange = async function () {
               const file = (this as HTMLInputElement).files?.[0]
               if (!file) return
 
-              const reader = new FileReader()
-              reader.onload = function () {
-                cb(reader.result as string, { title: file.name, text: file.name })
+              try {
+                const formData = new FormData()
+                formData.append('file', file, file.name)
+
+                const { data } = await httpClient.post<{ object_key: string }>('/admin/media/upload', formData, {
+                  headers: {
+                    'Content-Type': 'multipart/form-data',
+                  },
+                })
+
+                const fullUrl = getMediaUrl(data.object_key)
+                cb(fullUrl, { title: file.name, text: file.name })
+              } catch (error) {
+                console.error('TinyMCE file upload failed:', error)
+                alert('Tải tập tin lên thất bại!')
               }
-              reader.readAsDataURL(file)
             }
 
             input.click()
