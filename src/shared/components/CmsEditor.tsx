@@ -20,8 +20,8 @@ export const CmsEditor = memo(function CmsEditor({
   onChange,
   placeholder = 'Nhập nội dung...',
   disabled = false,
-  minHeight = 400,
-  maxHeight = 650,
+  minHeight = 250,
+  maxHeight = 600,
 }: CmsEditorProps) {
   const editorRef = useRef<any>(null)
 
@@ -54,13 +54,13 @@ export const CmsEditor = memo(function CmsEditor({
         init={{
           base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1',
           suffix: '.min',
-          height: minHeight,
+          min_height: minHeight,
           max_height: maxHeight,
           menubar: 'file edit view insert format tools table help',
           plugins: [
             'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
             'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount'
+            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'autogrow'
           ],
           toolbar: 'undo redo | blocks | ' +
             'bold italic underline strikethrough | alignleft aligncenter ' +
