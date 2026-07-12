@@ -67,6 +67,7 @@ export const CmsEditor = memo(function CmsEditor({
         init={{
           base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1',
           suffix: '.min',
+          resize: false,
           min_height: minHeight,
           max_height: maxHeight,
           menubar: 'file edit view insert format tools table help',
