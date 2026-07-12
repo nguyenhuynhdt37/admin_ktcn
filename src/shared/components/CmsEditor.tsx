@@ -1,6 +1,5 @@
-import { useRef, useMemo, memo } from 'react'
-import JoditEditor from 'jodit-react'
-import 'jodit/es5/jodit.min.css'
+import { useRef, memo } from 'react'
+import { Editor } from '@tinymce/tinymce-react'
 
 interface CmsEditorProps {
   /** Nội dung HTML */
@@ -8,9 +7,9 @@ interface CmsEditorProps {
   onChange?: (value: string) => void
   placeholder?: string
   disabled?: boolean
-  /** Chiều cao tối thiểu vùng soạn thảo (px). Mặc định 350 */
+  /** Chiều cao tối thiểu vùng soạn thảo (px). Mặc định 400 */
   minHeight?: number
-  /** Chiều cao tối đa vùng soạn thảo (px), vượt sẽ cuộn. Mặc định 600 */
+  /** Chiều cao tối đa vùng soạn thảo (px), vượt sẽ cuộn. Mặc định 650 */
   maxHeight?: number
 }
 
@@ -19,121 +18,87 @@ export const CmsEditor = memo(function CmsEditor({
   onChange,
   placeholder = 'Nhập nội dung...',
   disabled = false,
-  minHeight = 350,
-  maxHeight = 600,
+  minHeight = 400,
+  maxHeight = 650,
 }: CmsEditorProps) {
   const editorRef = useRef<any>(null)
 
-  const config = useMemo(() => ({
-    readonly: disabled,
-    placeholder: placeholder || 'Nhập nội dung...',
-    height: 'auto',
-    minHeight: minHeight,
-    maxHeight: maxHeight,
-    toolbarSticky: false,
-    theme: 'default',
-    buttons: [
-      'source',
-      '|',
-      'bold',
-      'italic',
-      'underline',
-      'strikethrough',
-      '|',
-      'ul',
-      'ol',
-      '|',
-      'outdent',
-      'indent',
-      '|',
-      'font',
-      'fontsize',
-      'brush',
-      'paragraph',
-      '|',
-      'image',
-      'video',
-      'table',
-      'link',
-      '|',
-      'align',
-      'undo',
-      'redo',
-      '|',
-      'hr',
-      'eraser',
-      'copyformat',
-      '|',
-      'symbol',
-      'fullsize',
-      'print'
-    ],
-    uploader: {
-      insertImageAsBase64URI: true
-    },
-    // Customize style in the editor area
-    style: {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontSize: '15px',
-      color: '#1e293b',
-      background: '#ffffff'
-    }
-  }), [disabled, placeholder, minHeight, maxHeight])
-
-  const handleBlur = (newContent: string) => {
-    onChange?.(newContent)
+  const handleEditorChange = (content: string) => {
+    onChange?.(content)
   }
 
   return (
     <div 
-      className="jodit-editor-wrapper relative w-full border rounded-lg overflow-hidden bg-background"
-      style={{
-        '--jodit-editor-min-height': `${minHeight}px`,
-        '--jodit-editor-max-height': `${maxHeight}px`,
-      } as React.CSSProperties}
+      className="tinymce-editor-wrapper relative w-full border rounded-lg overflow-hidden bg-background"
     >
       <style>{`
-        /* Overrides to make Jodit blend nicely with Shadcn UI */
-        .jodit-container {
+        /* Hide TinyMCE notification and branding */
+        .tox-notifications-container,
+        .tox-statusbar__branding {
+          display: none !important;
+        }
+        .tox-tinymce {
           border: none !important;
         }
-        .jodit-workplace {
-          background-color: #ffffff !important;
-        }
-        .jodit-wysiwyg {
-          min-height: \${minHeight}px !important;
-          max-height: \${maxHeight}px !important;
-          overflow-y: auto !important;
-          padding: 1rem 1.25rem !important;
-        }
-        .dark .jodit-wysiwyg {
-          background-color: #0f172a !important;
-          color: #f8fafc !important;
-        }
-        .dark .jodit-container {
-          background-color: #1e293b !important;
-          color: #f8fafc !important;
-        }
-        .dark .jodit-toolbar__box {
-          background-color: #1e293b !important;
-        }
-        .dark .jodit-toolbar-button__button {
-          color: #cbd5e1 !important;
-        }
-        .dark .jodit-toolbar-button__button:hover {
-          background-color: #334155 !important;
-        }
-        .dark .jodit-status-bar {
-          background-color: #1e293b !important;
-          border-top-color: #334155 !important;
-        }
       `}</style>
-      <JoditEditor
-        ref={editorRef}
+      <Editor
+        tinymceScriptSrc="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1/tinymce.min.js"
+        onInit={(_evt, editor) => {
+          editorRef.current = editor
+        }}
         value={value}
-        config={config}
-        onBlur={handleBlur}
-        onChange={onChange}
+        disabled={disabled}
+        onEditorChange={handleEditorChange}
+        init={{
+          height: minHeight,
+          max_height: maxHeight,
+          menubar: 'file edit view insert format tools table help',
+          plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'help', 'wordcount'
+          ],
+          toolbar: 'undo redo | blocks | ' +
+            'bold italic underline strikethrough | alignleft aligncenter ' +
+            'alignright alignjustify | bullist numlist outdent indent | ' +
+            'removeformat | image media table link | code fullscreen',
+          content_style: 'body { font-family:system-ui, -apple-system, sans-serif; font-size:15px; color:#1e293b; line-height: 1.6; }',
+          placeholder: placeholder || 'Nhập nội dung...',
+          branding: false,
+          promotion: false,
+          // Support image/file drag and drop & copy-paste as Base64 automatically
+          images_upload_handler: (blobInfo) => new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blobInfo.blob())
+          }),
+          // Support custom file upload (PDF, word docs, etc.) via link dialog
+          file_picker_callback: function (cb, _value, meta) {
+            const input = document.createElement('input')
+            input.setAttribute('type', 'file')
+            
+            if (meta.filetype === 'image') {
+              input.setAttribute('accept', 'image/*')
+            } else if (meta.filetype === 'media') {
+              input.setAttribute('accept', 'video/*,audio/*')
+            } else {
+              input.setAttribute('accept', '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx')
+            }
+
+            input.onchange = function () {
+              const file = (this as HTMLInputElement).files?.[0]
+              if (!file) return
+
+              const reader = new FileReader()
+              reader.onload = function () {
+                cb(reader.result as string, { title: file.name, text: file.name })
+              }
+              reader.readAsDataURL(file)
+            }
+
+            input.click()
+          }
+        }}
       />
     </div>
   )
