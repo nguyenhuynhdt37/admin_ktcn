@@ -128,7 +128,6 @@ function MenuItemConfigForm({
     isVisible,
     setTargetType,
     setTargetId,
-    setExternalUrl,
     setOpenInNewTab,
     setIsVisible,
     handleTranslationChange,
@@ -303,13 +302,13 @@ function MenuItemConfigForm({
           <div className="space-y-1.5 border-l-2 border-primary/30 pl-3 py-1">
             <Label htmlFor="externalUrl" className="text-xs font-semibold text-foreground/80 flex items-center gap-1.5">
               <LinkIcon className="h-3.5 w-3.5 text-primary" />
-              Đường dẫn liên kết (URL)
+              Đường dẫn liên kết ({activeTab === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh'})
             </Label>
             <Input
               id="externalUrl"
               value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="https://example.com/chuyen-muc-khac"
+              onChange={(e) => handleTranslationChange(activeTab, 'external_url', e.target.value)}
+              placeholder={activeTab === 'vi' ? 'https://example.com/trang-viet' : 'https://example.com/english-page'}
               disabled={!canUpdate}
               className="bg-background font-mono text-[13px] text-blue-600 dark:text-blue-400"
             />

@@ -215,7 +215,6 @@ export function MenuDragDropEditor({
         title: parentId ? 'Mục menu con mới' : 'Mục menu mới',
         target_type: null,
         target_id: null,
-        external_url: null,
         open_in_new_tab: false,
         is_visible: true,
         parent_id: parentId,

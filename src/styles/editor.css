@@ -317,3 +317,72 @@
   border-radius: var(--radius);
   margin: 1rem 0;
 }
+
+/* ── Căn lề văn bản (Text Alignment) ── */
+.ck-content .text-align-left {
+  text-align: left !important;
+}
+.ck-content .text-align-center {
+  text-align: center !important;
+}
+.ck-content .text-align-right {
+  text-align: right !important;
+}
+.ck-content .text-align-justify {
+  text-align: justify !important;
+}
+
+/* ── Căn lề hình ảnh và phần tử khác ── */
+.ck-content .image-style-align-left,
+.ck-content .image-style-block-align-left {
+  float: left !important;
+  margin-right: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  clear: left;
+}
+
+.ck-content .image-style-align-right,
+.ck-content .image-style-block-align-right {
+  float: right !important;
+  margin-left: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  clear: right;
+}
+
+.ck-content .image-style-side {
+  float: right !important;
+  max-width: 50% !important;
+  margin-left: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* ── Định dạng danh sách (Lists) ── */
+.ck-content ul,
+.ck-editor__editable ul {
+  list-style-type: disc !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1.5rem !important;
+}
+
+.ck-content ol,
+.ck-editor__editable ol {
+  list-style-type: decimal !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1.5rem !important;
+}
+
+.ck-content li,
+.ck-editor__editable li {
+  margin-bottom: 0.25rem !important;
+  display: list-item !important;
+}
+
+/* Clearfix for floated elements */
+.ck-content::after,
+.ck-editor__editable::after {
+  content: "" !important;
+  display: table !important;
+  clear: both !important;
+}

@@ -1,4 +1,4 @@
-import { Edit, Trash2, MoreHorizontal, ExternalLink, ArrowUpDown } from 'lucide-react'
+import { Edit, Trash2, MoreHorizontal, ExternalLink, ArrowUpDown, BookOpen } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Checkbox } from '@/shared/components/ui/checkbox'
@@ -101,7 +101,18 @@ export const getBannerColumns = ({
               {item.description}
             </span>
           )}
-          {item.link_url && (
+          {item.target_type === 'ARTICLE' && item.article_id && (
+            <div className="flex items-center gap-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
+              <Badge variant="outline" className="text-[9px] font-semibold text-emerald-700 border-emerald-200/50 bg-emerald-50/50 px-1.5 py-0 shadow-none flex items-center gap-1 rounded">
+                <BookOpen className="h-2.5 w-2.5 shrink-0" />
+                <span>Bài viết CMS</span>
+              </Badge>
+              <span className="text-[9px] font-mono text-slate-400 truncate max-w-[120px]" title={item.article_id}>
+                {item.article_id}
+              </span>
+            </div>
+          )}
+          {item.target_type === 'EXTERNAL' && item.link_url && (
             <a
               href={item.link_url}
               target="_blank"

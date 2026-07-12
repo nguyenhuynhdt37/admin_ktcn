@@ -3,10 +3,11 @@ import type {
   Department,
   CreateDepartmentPayload,
   UpdateDepartmentPayload,
-  UpdateDepartmentStatusPayload,
   DepartmentListParams,
   DepartmentPagination,
   DepartmentStats,
+  DepartmentSeoAnalyzePayload,
+  DepartmentSeoAnalysisResponse,
 } from '../types'
 
 export const departmentService = {
@@ -21,6 +22,7 @@ export const departmentService = {
     const cleanedParams = params ? { ...params } : {}
     if (cleanedParams.search === null) delete cleanedParams.search
     if (cleanedParams.is_active === null) delete cleanedParams.is_active
+    if (cleanedParams.unit_type === null || cleanedParams.unit_type === '') delete cleanedParams.unit_type
 
     const response = await httpClient.get('/admin/departments', { params: cleanedParams })
     return response.data
@@ -60,6 +62,12 @@ export const departmentService = {
     const response = await httpClient.get('/admin/departments/staffs-to-delete', {
       params: { department_ids: ids.join(',') }
     })
+    return response.data
+  },
+
+  /** Phân tích SEO trang bộ môn bằng AI */
+  analyzeSeo: async (departmentId: string, payload: DepartmentSeoAnalyzePayload): Promise<DepartmentSeoAnalysisResponse> => {
+    const response = await httpClient.post(`/admin/departments/${departmentId}/seo/analyze`, payload)
     return response.data
   },
 }

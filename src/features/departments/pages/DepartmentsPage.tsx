@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { SortingState, RowSelectionState, PaginationState } from '@tanstack/react-table'
+import { useNavigate, useSearchParams } from 'react-router'
 import {
   Building2,
   AlertCircle,
@@ -15,19 +16,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Button } from '@/shared/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog'
 import { DataTable } from '@/shared/components/DataTable'
-import { DepartmentForm } from '../components/DepartmentForm'
 import { getDepartmentColumns } from '../components/departmentColumns'
 import { departmentService } from '../services/departmentService'
 import { toast } from 'sonner'
 import { getMediaUrl } from '@/features/articles/utils/media'
-import { useSearchParams } from 'react-router'
 
 export function DepartmentsPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   
   // UI states
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{
     ids: string[]
     staffs: { id: string; full_name: string; avatar_object_key: string | null; position_name: string; department_id: string }[]
@@ -100,7 +98,7 @@ export function DepartmentsPage() {
   }), [pageIndex, pageSize, sortBy, sortDir])
 
   const {
-    data: departmentData = { items: [], total_items: 0, total_pages: 1 },
+    data: departmentData = { items: [], total: 0, total_pages: 1 },
     isLoading,
     isError,
     refetch,
@@ -118,63 +116,7 @@ export function DepartmentsPage() {
     queryFn: () => departmentService.getStats(),
   })
 
-  // 3. Query: Fetch details for the editing department
-  const { data: editingDepartment = null, isFetching: isFetchingDetail } = useQuery({
-    queryKey: ['departments', editingDepartmentId],
-    queryFn: () => departmentService.getDetail(editingDepartmentId!),
-    enabled: !!editingDepartmentId,
-  })
-
-  // 4. Mutation: Create a new department
-  const createMutation = useMutation({
-    mutationFn: departmentService.create,
-    onSuccess: () => {
-      toast.success('Thêm bộ môn mới thành công!')
-      setIsFormOpen(false)
-      queryClient.invalidateQueries({ queryKey: ['departments'] })
-      queryClient.invalidateQueries({ queryKey: ['departments-stats'] })
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (err: any) => {
-      const errorData = err?.response?.data?.error || err?.response?.data
-      const errorCode = errorData?.error_code || errorData?.code
-      const msg = errorData?.message
- 
-      if (errorCode === 'DUPLICATE_DEPARTMENT_NAME') {
-        toast.error('Tên bộ môn đã tồn tại trong hệ thống. Vui lòng chọn tên khác.')
-      } else {
-        toast.error(msg || 'Không thể tạo bộ môn. Vui lòng thử lại.')
-      }
-    },
-  })
-
-  // 5. Mutation: Update an existing department
-  const updateMutation = useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
-      departmentService.update(id, payload),
-    onSuccess: () => {
-      toast.success('Cập nhật bộ môn thành công!')
-      setEditingDepartmentId(null)
-      setIsFormOpen(false)
-      queryClient.invalidateQueries({ queryKey: ['departments'] })
-      queryClient.invalidateQueries({ queryKey: ['departments-stats'] })
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (err: any) => {
-      const errorData = err?.response?.data?.error || err?.response?.data
-      const errorCode = errorData?.error_code || errorData?.code
-      const msg = errorData?.message
- 
-      if (errorCode === 'DUPLICATE_DEPARTMENT_NAME') {
-        toast.error('Tên bộ môn đã tồn tại trong hệ thống. Vui lòng chọn tên khác.')
-      } else {
-        toast.error(msg || 'Không thể cập nhật bộ môn. Vui lòng thử lại.')
-      }
-    },
-  })
-
-  // 6. Mutation: Toggle active status (Switch)
+  // 3. Mutation: Toggle active status (Switch)
   const toggleStatusMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
       departmentService.updateStatus(id, { is_active }),
@@ -190,7 +132,7 @@ export function DepartmentsPage() {
     },
   })
 
-  // 7. Mutation: Soft delete department
+  // 4. Mutation: Soft delete department
   const deleteMutation = useMutation({
     mutationFn: departmentService.delete,
     onSuccess: () => {
@@ -212,7 +154,7 @@ export function DepartmentsPage() {
     },
   })
 
-  // 8. Bulk Mutations (Client-side Promise.all wrapper)
+  // 5. Bulk Mutations
   const bulkStatusMutation = useMutation({
     mutationFn: async ({ ids, is_active }: { ids: string[]; is_active: boolean }) => {
       return Promise.all(ids.map((id) => departmentService.updateStatus(id, { is_active })))
@@ -248,30 +190,14 @@ export function DepartmentsPage() {
     },
   })
 
-  // Handlers (useCallback to prevent unnecessary table/form re-renders)
+  // Handlers
   const handleEditClick = useCallback((id: string) => {
-    setEditingDepartmentId(id)
-    setIsFormOpen(true)
-  }, [])
+    navigate(`/departments/${id}/edit`)
+  }, [navigate])
 
   const handleAddClick = useCallback(() => {
-    setEditingDepartmentId(null)
-    setIsFormOpen(true)
-  }, [])
-
-  const handleCancelForm = useCallback(() => {
-    setIsFormOpen(false)
-    setEditingDepartmentId(null)
-  }, [])
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleFormSubmit = useCallback((values: any) => {
-    if (editingDepartmentId) {
-      updateMutation.mutate({ id: editingDepartmentId, payload: values })
-    } else {
-      createMutation.mutate(values)
-    }
-  }, [editingDepartmentId, updateMutation, createMutation])
+    navigate('/departments/create')
+  }, [navigate])
 
   const handleToggleStatus = useCallback((id: string, active: boolean) => {
     toggleStatusMutation.mutate({ id, is_active: active })
@@ -408,7 +334,7 @@ export function DepartmentsPage() {
             columns={columns}
             data={departments}
             pageSize={pagination.pageSize}
-            totalCount={departmentData.total_items}
+            totalCount={departmentData.total}
             pageCount={departmentData.total_pages}
             pageIndex={pagination.pageIndex}
             onPageChange={(pageIndex) => setPagination((p) => ({ ...p, pageIndex }))}
@@ -474,25 +400,6 @@ export function DepartmentsPage() {
           </div>
         </div>
       )}
-
-      {/* Dialog Form (Add/Edit Modal) */}
-      <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCancelForm()}>
-        <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border">
-          {editingDepartmentId && isFetchingDetail ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <p className="text-xs text-muted-foreground animate-pulse font-medium">Đang tải thông tin bộ môn...</p>
-            </div>
-          ) : (
-            <DepartmentForm
-              initialData={editingDepartmentId ? editingDepartment : null}
-              onSubmit={handleFormSubmit}
-              onCancel={handleCancelForm}
-              isSubmitting={createMutation.isPending || updateMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Custom Cascade Delete Warning Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

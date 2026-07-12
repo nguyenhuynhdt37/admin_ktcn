@@ -15,13 +15,15 @@ export interface Banner {
   description?: string
   desktop_image_object_key: string  // Đã được BE tự chuyển thành Full HTTP URL khi GET
   mobile_image_object_key?: string // Đã được BE tự chuyển thành Full HTTP URL (nếu có) khi GET
-  link_url?: string
+  link_url?: string | null
   open_in_new_tab: boolean
   position: BannerPosition
   sort_order: number
   start_at?: string               // ISO Date String
   end_at?: string                 // ISO Date String
   is_active: boolean
+  target_type: 'ARTICLE' | 'EXTERNAL'
+  article_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -50,6 +52,8 @@ export interface CreateBannerPayload {
   start_at?: string | null
   end_at?: string | null
   is_active: boolean
+  target_type: 'ARTICLE' | 'EXTERNAL'
+  article_id?: string | null
 }
 
 export interface UpdateBannerPayload {
@@ -64,6 +68,8 @@ export interface UpdateBannerPayload {
   start_at?: string | null
   end_at?: string | null
   is_active?: boolean
+  target_type?: 'ARTICLE' | 'EXTERNAL'
+  article_id?: string | null
 }
 
 export interface UpdateBannerStatusPayload {

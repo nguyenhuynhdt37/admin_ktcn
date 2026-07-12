@@ -20,6 +20,11 @@ import { EmbeddingSettingsPage } from '@/features/ai-hub/pages/EmbeddingSettings
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage'
 import { PositionsPage } from '@/features/positions/pages/PositionsPage'
 import { DepartmentsPage } from '@/features/departments/pages/DepartmentsPage'
+import DepartmentCreatePage from '@/features/departments/pages/DepartmentCreatePage'
+import DepartmentEditPage from '@/features/departments/pages/DepartmentEditPage'
+import { GalleriesPage } from '@/features/galleries/pages/GalleriesPage'
+import GalleryCreatePage from '@/features/galleries/pages/GalleryCreatePage'
+import GalleryEditPage from '@/features/galleries/pages/GalleryEditPage'
 import { BannersPage } from '@/features/banners/pages/BannersPage'
 import { TeachersPage } from '@/features/teachers/pages/TeachersPage'
 import TeacherCreatePage from '@/features/teachers/pages/TeacherCreatePage'
@@ -93,6 +98,26 @@ export const router = createBrowserRouter([
       {
         path: 'departments',
         element: <DepartmentsPage />,
+      },
+      {
+        path: 'departments/create',
+        element: <DepartmentCreatePage />,
+      },
+      {
+        path: 'departments/:id/edit',
+        element: <DepartmentEditPage />,
+      },
+      {
+        path: 'galleries',
+        element: <GalleriesPage />,
+      },
+      {
+        path: 'galleries/create',
+        element: <GalleryCreatePage />,
+      },
+      {
+        path: 'galleries/:id/edit',
+        element: <GalleryEditPage />,
       },
       {
         path: 'tags',

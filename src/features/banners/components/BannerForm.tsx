@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -22,10 +22,14 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/shared/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/shared/components/ui/command'
 import { toast } from 'sonner'
-import { Camera, Loader2, Trash2, Sparkles } from 'lucide-react'
+import { Camera, Loader2, Trash2, Sparkles, BookOpen, Globe, Check, ChevronsUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { BannerPosition, type Banner } from '../types'
 import { bannerService } from '../services/bannerService'
+import { articleService } from '@/features/articles/services/articleService'
 
 const bannerFormSchema = z.object({
   title: z.string()
@@ -43,13 +47,11 @@ const bannerFormSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
+  target_type: z.enum(['ARTICLE', 'EXTERNAL']).default('EXTERNAL'),
+  article_id: z.string().nullable().optional().or(z.literal('')),
   link_url: z.string()
     .trim()
     .max(255, { message: 'Đường dẫn liên kết không vượt quá 255 ký tự' })
-    .refine(
-      (val) => !val || /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(val),
-      { message: 'Đường dẫn liên kết không đúng định dạng' }
-    )
     .nullable()
     .optional()
     .or(z.literal('')),
@@ -68,6 +70,25 @@ const bannerFormSchema = z.object({
     .optional()
     .or(z.literal('')),
   is_active: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  if (data.target_type === 'ARTICLE') {
+    if (!data.article_id || data.article_id.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Bài viết liên kết không được để trống khi chọn loại ARTICLE',
+        path: ['article_id'],
+      })
+    }
+  } else if (data.target_type === 'EXTERNAL' && data.link_url) {
+    const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+    if (!urlPattern.test(data.link_url)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Đường dẫn liên kết không đúng định dạng',
+        path: ['link_url'],
+      })
+    }
+  }
 })
 
 type BannerFormValues = z.infer<typeof bannerFormSchema>
@@ -107,6 +128,88 @@ export function BannerForm({
   const [mobileUploading, setMobileUploading] = useState(false)
   const [localMobileUrl, setLocalMobileUrl] = useState<string | null>(null)
 
+  // Articles list state for select box
+  const [articles, setArticles] = useState<{ id: string; title: string; categoryName: string }[]>([])
+  const [loadingArticles, setLoadingArticles] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery)
+    }, 400)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [searchQuery])
+
+  // Fetch articles on mount or when debouncedQuery changes
+  useEffect(() => {
+    let isMounted = true
+
+    const fetchArticles = async () => {
+      setLoadingArticles(true)
+      try {
+        const res = await articleService.list({ 
+          page: 1, 
+          page_size: 30, // Giới hạn 30 bài viết
+          status: 'PUBLISHED',
+          search: debouncedQuery || undefined
+        })
+        
+        const items = res.items.map(item => ({
+          id: item.id,
+          title: item.translations.vi?.title || item.translations.en?.title || 'Chưa dịch (Tiêu đề)',
+          categoryName: item.category?.name || 'Không có danh mục'
+        }))
+
+        if (isMounted) {
+          setArticles(items)
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Không thể lấy danh sách bài viết:', err)
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingArticles(false)
+        }
+      }
+    }
+    fetchArticles()
+
+    return () => {
+      isMounted = false
+    }
+  }, [debouncedQuery])
+
+  // Fetch selected article details if not present in the current articles list (e.g. older articles on edit)
+  useEffect(() => {
+    const selectedId = initialData?.article_id
+    if (!selectedId || articles.some(art => art.id === selectedId)) return
+
+    const fetchSelectedArticle = async () => {
+      try {
+        const art = await articleService.getDetail(selectedId)
+        const mappedArt = {
+          id: art.id,
+          title: art.translations.vi?.title || art.translations.en?.title || 'Chưa dịch (Tiêu đề)',
+          categoryName: art.category?.name || 'Không có danh mục'
+        }
+        setArticles(prev => {
+          if (prev.some(p => p.id === mappedArt.id)) return prev
+          return [...prev, mappedArt]
+        })
+      } catch (err) {
+        console.error('Không thể lấy chi tiết bài viết đã chọn:', err)
+      }
+    }
+    fetchSelectedArticle()
+  }, [initialData?.article_id, articles.length])
+
   // Helper to format ISO date string to datetime-local input format (YYYY-MM-DDThh:mm)
   const formatIsoToLocal = (isoStr?: string) => {
     if (!isoStr) return ''
@@ -128,6 +231,8 @@ export function BannerForm({
       description: initialData.description || '',
       desktop_image_object_key: initialData.desktop_image_object_key,
       mobile_image_object_key: initialData.mobile_image_object_key || '',
+      target_type: initialData.target_type || 'EXTERNAL',
+      article_id: initialData.article_id || '',
       link_url: initialData.link_url || '',
       open_in_new_tab: initialData.open_in_new_tab,
       position: initialData.position,
@@ -140,6 +245,8 @@ export function BannerForm({
       description: '',
       desktop_image_object_key: '',
       mobile_image_object_key: '',
+      target_type: 'EXTERNAL',
+      article_id: '',
       link_url: '',
       open_in_new_tab: false,
       position: BannerPosition.HOME_HERO,
@@ -153,6 +260,7 @@ export function BannerForm({
   // Watch image values reactively using useWatch
   const desktopKey = useWatch({ control: form.control, name: 'desktop_image_object_key' })
   const mobileKey = useWatch({ control: form.control, name: 'mobile_image_object_key' })
+  const targetType = useWatch({ control: form.control, name: 'target_type' })
 
   const desktopPreview = localDesktopUrl || desktopKey
   const mobilePreview = localMobileUrl || mobileKey
@@ -225,9 +333,11 @@ export function BannerForm({
       ...data,
       description: data.description ? data.description.trim() : null,
       mobile_image_object_key: data.mobile_image_object_key ? data.mobile_image_object_key : null,
-      link_url: data.link_url ? data.link_url.trim() : null,
       start_at: formatToIsoOrNull(data.start_at),
       end_at: formatToIsoOrNull(data.end_at),
+      target_type: data.target_type,
+      link_url: data.target_type === 'EXTERNAL' ? (data.link_url ? data.link_url.trim() : null) : null,
+      article_id: data.target_type === 'ARTICLE' ? (data.article_id ? data.article_id : null) : null,
     }
     onSubmit(normalizedData)
   }
@@ -475,25 +585,166 @@ export function BannerForm({
                 />
               </div>
 
-              {/* Liên kết URL */}
+              {/* Loại liên kết hiển thị */}
               <FormField
                 control={form.control}
-                name="link_url"
+                name="target_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold">Đường dẫn liên kết (Link URL)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ví dụ: https://example.com/tin-tuc"
-                        className="text-xs focus-visible:ring-primary/20 h-10 bg-background font-mono"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
+                    <FormLabel className="text-xs font-semibold">Loại liên kết</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="text-xs h-10 bg-background focus:ring-primary/20">
+                          <SelectValue placeholder="Chọn loại liên kết" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="EXTERNAL" className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-3.5 w-3.5 text-slate-500" />
+                            <span>Liên kết ngoài / URL tự do</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="ARTICLE" className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-3.5 w-3.5 text-slate-500" />
+                            <span>Bài viết CMS có sẵn</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage className="text-[10px]" />
                   </FormItem>
                 )}
               />
+
+              {/* Điều kiện hiển thị Input dựa vào target_type */}
+              {targetType === 'ARTICLE' ? (
+                <FormField
+                  control={form.control}
+                  name="article_id"
+                  render={({ field }) => {
+                    const selectedArticle = articles.find(art => art.id === field.value)
+                    
+                    return (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-xs font-semibold">Bài viết liên kết <span className="text-destructive">*</span></FormLabel>
+                        <Popover open={open} onOpenChange={setOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className={cn(
+                                  "w-full justify-between text-xs h-10 px-3 bg-background border font-normal cursor-pointer",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  selectedArticle ? (
+                                    <span className="truncate text-left font-semibold text-slate-800">
+                                      [{selectedArticle.categoryName}] {selectedArticle.title}
+                                    </span>
+                                  ) : (
+                                    <span className="truncate text-left font-semibold text-slate-500">
+                                      Bài viết liên kết hiện tại ({field.value})
+                                    </span>
+                                  )
+                                ) : (
+                                  "Chọn bài viết..."
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent 
+                            className="w-[var(--radix-popover-trigger-width)] p-0 z-50" 
+                            align="start"
+                            onWheel={(e) => e.stopPropagation()}
+                            onTouchMove={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                          >
+                            <Command shouldFilter={false} className="w-full">
+                              <CommandInput 
+                                placeholder="Tìm kiếm bài viết..." 
+                                value={searchQuery}
+                                onValueChange={setSearchQuery}
+                                className="h-9 text-xs"
+                              />
+                              <CommandList className="max-h-[220px] overflow-y-auto overscroll-contain">
+                                {loadingArticles && articles.length === 0 ? (
+                                  <div className="flex items-center justify-center p-6 text-xs text-muted-foreground gap-2">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
+                                    <span>Đang tải...</span>
+                                  </div>
+                                ) : articles.length === 0 ? (
+                                  <CommandEmpty className="py-6 text-center text-xs text-muted-foreground">
+                                    {loadingArticles ? "Đang tải dữ liệu..." : "Không tìm thấy bài viết nào."}
+                                  </CommandEmpty>
+                                ) : (
+                                  <CommandGroup>
+                                    {articles.map((art) => (
+                                      <CommandItem
+                                        key={art.id}
+                                        value={art.id}
+                                        onSelect={() => {
+                                          form.setValue('article_id', art.id)
+                                          form.trigger('article_id')
+                                          setOpen(false)
+                                        }}
+                                        className="text-xs cursor-pointer flex items-center justify-between py-2 px-2.5"
+                                      >
+                                        <div className="flex flex-col gap-0.5 max-w-[90%] text-left">
+                                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/40 rounded px-1.5 py-0.5 w-fit leading-normal">
+                                            {art.categoryName}
+                                          </span>
+                                          <span className="font-semibold text-slate-800 line-clamp-1 leading-normal">
+                                            {art.title}
+                                          </span>
+                                        </div>
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4 text-emerald-600 shrink-0",
+                                            field.value === art.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                )}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )
+                  }}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="link_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">Đường dẫn liên kết (Link URL)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Ví dụ: https://example.com/tin-tuc"
+                          className="text-xs focus-visible:ring-primary/20 h-10 bg-background font-mono"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-[9px] text-slate-400 leading-normal">
+                        Bỏ trống nếu banner này không cần liên kết (chỉ hiển thị ảnh tĩnh).
+                      </FormDescription>
+                      <FormMessage className="text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Ngày bắt đầu hiển thị */}

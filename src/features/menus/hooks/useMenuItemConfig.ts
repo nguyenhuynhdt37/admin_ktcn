@@ -21,23 +21,22 @@ interface UseMenuItemConfigProps {
 export interface MenuItemFormState {
   target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | 'DEPARTMENT' | null
   target_id: string | null
-  external_url: string | null
   open_in_new_tab: boolean
   is_visible: boolean
   translations: {
-    vi: { title: string }
-    en: { title: string }
+    vi: { title: string; external_url: string }
+    en: { title: string; external_url: string }
   }
 }
 
 export const INITIAL_TRANSLATION = {
   title: '',
+  external_url: '',
 }
 
 export const INITIAL_FORM_STATE: MenuItemFormState = {
   target_type: null,
   target_id: null,
-  external_url: null,
   open_in_new_tab: false,
   is_visible: true,
   translations: {
@@ -59,6 +58,7 @@ export function parseMenuTranslations(rawTranslations: any) {
       if (code === 'vi' || code === 'en') {
         result[code as 'vi' | 'en'] = {
           title: item.title || '',
+          external_url: item.external_url || '',
         }
       }
     })
@@ -68,6 +68,7 @@ export function parseMenuTranslations(rawTranslations: any) {
       if (item) {
         result[code as 'vi' | 'en'] = {
           title: item.title || '',
+          external_url: item.external_url || '',
         }
       }
     })
@@ -91,7 +92,22 @@ export function useMenuItemConfig({
   const [isTranslating, setIsTranslating] = useState(false)
 
   // State quản lý toàn bộ Form
-  const [form, setForm] = useState<MenuItemFormState>({ ...INITIAL_FORM_STATE })
+  const [form, setForm] = useState<MenuItemFormState>(() => {
+    if (item) {
+      const parsedTrans = parseMenuTranslations(item.translations)
+      if (!parsedTrans.vi.title && item.title) {
+        parsedTrans.vi.title = item.title
+      }
+      return {
+        target_type: item.target_type || null,
+        target_id: item.target_id || null,
+        open_in_new_tab: !!item.open_in_new_tab,
+        is_visible: item.is_visible !== false,
+        translations: parsedTrans,
+      }
+    }
+    return { ...INITIAL_FORM_STATE }
+  })
 
   // Ref lưu giá trị tiếng Việt đã dịch gần nhất để tránh dịch lặp lại
   const lastTranslatedViRef = useState<string>('')
@@ -110,7 +126,6 @@ export function useMenuItemConfig({
       setForm({
         target_type: item.target_type || null,
         target_id: item.target_id || null,
-        external_url: item.external_url || null,
         open_in_new_tab: !!item.open_in_new_tab,
         is_visible: item.is_visible !== false,
         translations: parsedTrans,
@@ -122,7 +137,6 @@ export function useMenuItemConfig({
 
   const targetType = form.target_type || 'NONE'
   const targetId = form.target_id || ''
-  const externalUrl = form.external_url || ''
   const openInNewTab = form.open_in_new_tab
   const isVisible = form.is_visible
 
@@ -131,8 +145,8 @@ export function useMenuItemConfig({
     setForm((prev) => ({ ...prev, [field]: value }))
   }, [])
 
-  // Cập nhật trường dịch thuật
-  const handleTranslationChange = useCallback((lang: 'vi' | 'en', field: 'title', value: string) => {
+  // Cập nhật trường dịch thuật (title hoặc external_url)
+  const handleTranslationChange = useCallback((lang: 'vi' | 'en', field: 'title' | 'external_url', value: string) => {
     setForm((prev) => {
       const nextTrans = { ...prev.translations }
       nextTrans[lang] = { ...nextTrans[lang], [field]: value }
@@ -145,16 +159,16 @@ export function useMenuItemConfig({
       ...prev,
       target_type: type === 'NONE' ? null : (type as any),
       target_id: null,
-      external_url: null,
+      // Reset external_url trong translations khi đổi loại liên kết
+      translations: {
+        vi: { ...prev.translations.vi, external_url: '' },
+        en: { ...prev.translations.en, external_url: '' },
+      },
     }))
   }
 
   const setTargetId = (id: string | null) => {
     setForm((prev) => ({ ...prev, target_id: id }))
-  }
-
-  const setExternalUrl = (url: string) => {
-    setForm((prev) => ({ ...prev, external_url: url }))
   }
 
   const setOpenInNewTab = (val: boolean) => {
@@ -300,15 +314,22 @@ export function useMenuItemConfig({
       return
     }
 
+    const isExternal = form.target_type === 'EXTERNAL_LINK'
+
     const payload: MenuItemPayload = {
       target_type: form.target_type || null,
       target_id: ['CATEGORY', 'ARTICLE', 'PAGE', 'MODULE', 'DEPARTMENT'].includes(form.target_type || '') ? (form.target_id || null) : null,
-      external_url: form.target_type === 'EXTERNAL_LINK' ? (form.external_url || null) : null,
       open_in_new_tab: form.open_in_new_tab,
       is_visible: form.is_visible,
       translations: {
-        vi: { title: form.translations.vi.title.trim() },
-        en: { title: form.translations.en.title.trim() },
+        vi: {
+          title: form.translations.vi.title.trim(),
+          external_url: isExternal ? (form.translations.vi.external_url?.trim() || null) : null,
+        },
+        en: {
+          title: form.translations.en.title.trim(),
+          external_url: isExternal ? (form.translations.en.external_url?.trim() || null) : null,
+        },
       }
     }
 
@@ -329,14 +350,13 @@ export function useMenuItemConfig({
     setActiveTab,
     isTranslating,
     title: form.translations[activeTab].title,
+    externalUrl: form.translations[activeTab].external_url || '',
     targetType,
     targetId,
-    externalUrl,
     openInNewTab,
     isVisible,
     setTargetType,
     setTargetId,
-    setExternalUrl,
     setOpenInNewTab,
     setIsVisible,
     handleTranslationChange,

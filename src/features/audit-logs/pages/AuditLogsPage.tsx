@@ -91,8 +91,18 @@ export function AuditLogsPage() {
       }
       if (filters.action) params.action = filters.action
       if (filters.target_type) params.target_type = filters.target_type
-      if (filters.from_date) params.from_date = new Date(filters.from_date).toISOString()
-      if (filters.to_date) params.to_date = new Date(filters.to_date + 'T23:59:59').toISOString()
+      if (filters.from_date) {
+        const d = new Date(filters.from_date + 'T00:00:00')
+        if (!isNaN(d.getTime())) {
+          params.from_date = d.toISOString()
+        }
+      }
+      if (filters.to_date) {
+        const d = new Date(filters.to_date + 'T23:59:59')
+        if (!isNaN(d.getTime())) {
+          params.to_date = d.toISOString()
+        }
+      }
       if (filters.actor_id) params.actor_id = filters.actor_id
 
       return auditLogsService.list(params)

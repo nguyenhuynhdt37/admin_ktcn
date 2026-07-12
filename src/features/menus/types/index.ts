@@ -9,6 +9,7 @@ export interface TargetInfo {
 
 export interface MenuItemTranslation {
   title: string
+  external_url?: string | null
 }
 
 export interface MenuItemNode {
@@ -47,7 +48,6 @@ export interface MenuListItem {
 export interface MenuItemPayload {
   target_type: 'CATEGORY' | 'ARTICLE' | 'PAGE' | 'MODULE' | 'EXTERNAL_LINK' | 'DEPARTMENT' | null
   target_id: string | null
-  external_url: string | null
   open_in_new_tab: boolean
   is_visible: boolean
   translations: Record<string, MenuItemTranslation>

@@ -51,12 +51,11 @@ export function MenuItemCreatePanel({
 
   // State form
   const [translations, setTranslations] = useState({
-    vi: { title: '' },
-    en: { title: '' },
+    vi: { title: '', external_url: '' },
+    en: { title: '', external_url: '' },
   })
   const [targetType, setTargetType] = useState<string>('NONE')
   const [targetId, setTargetId] = useState('')
-  const [externalUrl, setExternalUrl] = useState('')
   const [openInNewTab, setOpenInNewTab] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -102,10 +101,10 @@ export function MenuItemCreatePanel({
   const articlesList = articlesData?.items || []
   const departmentsList = departmentsData?.items || []
 
-  const handleTranslationChange = (lang: 'vi' | 'en', value: string) => {
+  const handleTranslationChange = (lang: 'vi' | 'en', field: 'title' | 'external_url', value: string) => {
     setTranslations((prev) => ({
       ...prev,
-      [lang]: { title: value }
+      [lang]: { ...prev[lang], [field]: value }
     }))
   }
 
@@ -128,7 +127,7 @@ export function MenuItemCreatePanel({
       })
       
       if (res.data?.en) {
-        handleTranslationChange('en', res.data.en)
+        handleTranslationChange('en', 'title', res.data.en)
         toast.success('Đã dịch tự động sang Tiếng Anh thành công!')
       } else {
         toast.error('Không nhận được bản dịch từ máy chủ.')
@@ -186,16 +185,23 @@ export function MenuItemCreatePanel({
       return
     }
 
+    const isExternal = targetType === 'EXTERNAL_LINK'
+
     const payload = {
       target_type: !targetType || targetType === 'NONE' ? null : targetType,
       target_id: ['CATEGORY', 'ARTICLE', 'PAGE', 'MODULE', 'DEPARTMENT'].includes(targetType || '') ? (targetId.trim() || null) : null,
-      external_url: targetType === 'EXTERNAL_LINK' ? (externalUrl.trim() || null) : null,
       open_in_new_tab: openInNewTab,
       is_visible: isVisible,
       parent_id: parentId || null,
       translations: {
-        vi: { title: translations.vi.title.trim() },
-        en: { title: translations.en.title.trim() },
+        vi: {
+          title: translations.vi.title.trim(),
+          external_url: isExternal ? (translations.vi.external_url?.trim() || null) : null,
+        },
+        en: {
+          title: translations.en.title.trim(),
+          external_url: isExternal ? (translations.en.external_url?.trim() || null) : null,
+        },
       }
     }
 
@@ -298,7 +304,7 @@ export function MenuItemCreatePanel({
           <Input
             id="create-title"
             value={translations[activeTab].title}
-            onChange={(e) => handleTranslationChange(activeTab, e.target.value)}
+            onChange={(e) => handleTranslationChange(activeTab, 'title', e.target.value)}
             placeholder={activeTab === 'vi' ? 'VD: Liên hệ' : 'VD: Contact Us'}
             className="font-medium bg-background border-border/80"
           />
@@ -335,13 +341,13 @@ export function MenuItemCreatePanel({
           <div className="space-y-1.5 border-l-2 border-primary/30 pl-3 py-1">
             <Label htmlFor="create-externalUrl" className="text-xs font-semibold text-foreground/80 flex items-center gap-1.5">
               <LinkIcon className="h-3.5 w-3.5 text-primary" />
-              Đường dẫn liên kết (URL)
+              Đường dẫn liên kết ({activeTab === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh'})
             </Label>
             <Input
               id="create-externalUrl"
-              value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="https://example.com/chuyen-muc-khac"
+              value={translations[activeTab].external_url}
+              onChange={(e) => handleTranslationChange(activeTab, 'external_url', e.target.value)}
+              placeholder={activeTab === 'vi' ? 'https://example.com/trang-viet' : 'https://example.com/english-page'}
               className="bg-background font-mono text-[13px] text-blue-600 dark:text-blue-400"
             />
           </div>
