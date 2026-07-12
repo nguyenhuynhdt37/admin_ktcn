@@ -81,6 +81,7 @@ export const CmsEditor = memo(function CmsEditor({
         }
       `}</style>
       <Editor
+        key={disabled ? 'disabled' : 'enabled'}
         tinymceScriptSrc="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1/tinymce.min.js"
         onInit={(_evt, editor) => {
           editorRef.current = editor
