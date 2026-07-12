@@ -25,43 +25,6 @@ export const CmsEditor = memo(function CmsEditor({
 }: CmsEditorProps) {
   const editorRef = useRef<any>(null)
 
-  // Kiểm tra xem người dùng có đang chủ động tương tác với editor (iframe, toolbar, menu...) hay không
-  const isInteracting = () => {
-    if (!editorRef.current) return false
-    // 1. Editor đang có focus trực tiếp trong iframe soạn thảo
-    if (editorRef.current.hasFocus()) return true
-    
-    // 2. Focus đang nằm trên thanh công cụ hoặc thanh trạng thái của editor
-    const container = editorRef.current.getContainer()
-    if (container && container.contains(document.activeElement)) return true
-    
-    // 3. Focus đang nằm trên các popup dropdown, menu, hoặc dialog của TinyMCE (thường được gắn ở body)
-    const activeEl = document.activeElement
-    if (activeEl && (
-      activeEl.closest('.tox-tinymce-aux') || 
-      activeEl.closest('.tox-dialog') || 
-      activeEl.closest('.tox-menu')
-    )) {
-      return true
-    }
-    
-    return false
-  }
-
-  // Sync outside changes (like translations or form loads) to avoid cursor jumping
-  useEffect(() => {
-    if (editorRef.current) {
-      const safeValue = value || ''
-      // Chỉ đồng bộ khi người dùng KHÔNG đang tương tác với editor (thay đổi từ nút bấm bên ngoài hoặc load dữ liệu)
-      if (!isInteracting()) {
-        const currentContent = editorRef.current.getContent()
-        if (safeValue !== currentContent) {
-          editorRef.current.setContent(safeValue)
-        }
-      }
-    }
-  }, [value])
-
   const handleEditorChange = (content: string) => {
     onChange?.(content)
   }
@@ -96,12 +59,8 @@ export const CmsEditor = memo(function CmsEditor({
           editorRef.current = editor
           // Thiết lập trạng thái ban đầu chuẩn xác để tránh race condition
           editor.mode.set(disabled ? 'readonly' : 'design')
-          if (value && editor.getContent() !== value) {
-            editor.setContent(value)
-          }
         }}
-        initialValue={value}
-        disabled={disabled}
+        value={value || ''}
         onEditorChange={handleEditorChange}
         init={{
           base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1',
