@@ -50,6 +50,8 @@ export const CmsEditor = memo(function CmsEditor({
         disabled={disabled}
         onEditorChange={handleEditorChange}
         init={{
+          base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1',
+          suffix: '.min',
           height: minHeight,
           max_height: maxHeight,
           menubar: 'file edit view insert format tools table help',
