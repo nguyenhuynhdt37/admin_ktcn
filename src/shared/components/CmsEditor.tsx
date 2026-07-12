@@ -1,4 +1,4 @@
-import { useRef, memo } from 'react'
+import { useRef, useEffect, memo } from 'react'
 import { Editor } from '@tinymce/tinymce-react'
 import { httpClient } from '@/services/http/client'
 import { getMediaUrl } from '@/features/articles/utils/media'
@@ -25,6 +25,16 @@ export const CmsEditor = memo(function CmsEditor({
 }: CmsEditorProps) {
   const editorRef = useRef<any>(null)
 
+  // Sync outside changes (like translations or form loads) to avoid cursor jumping
+  useEffect(() => {
+    if (editorRef.current) {
+      const currentContent = editorRef.current.getContent()
+      if (value !== currentContent) {
+        editorRef.current.setContent(value || '')
+      }
+    }
+  }, [value])
+
   const handleEditorChange = (content: string) => {
     onChange?.(content)
   }
@@ -47,8 +57,11 @@ export const CmsEditor = memo(function CmsEditor({
         tinymceScriptSrc="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1/tinymce.min.js"
         onInit={(_evt, editor) => {
           editorRef.current = editor
+          if (value && editor.getContent() !== value) {
+            editor.setContent(value)
+          }
         }}
-        value={value}
+        initialValue={value}
         disabled={disabled}
         onEditorChange={handleEditorChange}
         init={{
