@@ -24,18 +24,24 @@ export const CmsEditor = memo(function CmsEditor({
   maxHeight = 600,
 }: CmsEditorProps) {
   const editorRef = useRef<any>(null)
+  const lastSentValueRef = useRef(value)
 
   // Sync outside changes (like translations or form loads) to avoid cursor jumping
   useEffect(() => {
     if (editorRef.current) {
-      const currentContent = editorRef.current.getContent()
-      if (value !== currentContent) {
-        editorRef.current.setContent(value || '')
+      const safeValue = value || ''
+      if (safeValue !== lastSentValueRef.current) {
+        const currentContent = editorRef.current.getContent()
+        if (safeValue !== currentContent) {
+          editorRef.current.setContent(safeValue)
+        }
+        lastSentValueRef.current = safeValue
       }
     }
   }, [value])
 
   const handleEditorChange = (content: string) => {
+    lastSentValueRef.current = content
     onChange?.(content)
   }
 
