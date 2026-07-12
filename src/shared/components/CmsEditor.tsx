@@ -66,7 +66,7 @@ export const CmsEditor = memo(function CmsEditor({
             'bold italic underline strikethrough | alignleft aligncenter ' +
             'alignright alignjustify | bullist numlist outdent indent | ' +
             'removeformat | image media table link | code fullscreen',
-          content_style: 'body { font-family:system-ui, -apple-system, sans-serif; font-size:15px; color:#1e293b; line-height: 1.6; }',
+          content_style: 'body { font-family:system-ui, -apple-system, sans-serif; font-size:15px; color:#1e293b; line-height: 1.6; text-align: justify; } img { max-width: 100% !important; height: auto !important; }',
           placeholder: placeholder || 'Nhập nội dung...',
           branding: false,
           promotion: false,

@@ -244,6 +244,7 @@
 
 .ck-content p {
   margin-bottom: 0.75rem;
+  text-align: justify;
 }
 
 .ck-content a {
