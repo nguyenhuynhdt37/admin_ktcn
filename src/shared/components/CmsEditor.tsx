@@ -66,6 +66,16 @@ export const CmsEditor = memo(function CmsEditor({
     onChange?.(content)
   }
 
+  // Đồng bộ trạng thái disabled trực tiếp vào editor mode để tránh lỗi kẹt readonly khi F5
+  useEffect(() => {
+    if (editorRef.current) {
+      const targetMode = disabled ? 'readonly' : 'design'
+      if (editorRef.current.mode.get() !== targetMode) {
+        editorRef.current.mode.set(targetMode)
+      }
+    }
+  }, [disabled])
+
   return (
     <div 
       className="tinymce-editor-wrapper relative w-full border rounded-lg overflow-hidden bg-background"
@@ -81,10 +91,11 @@ export const CmsEditor = memo(function CmsEditor({
         }
       `}</style>
       <Editor
-        key={disabled ? 'disabled' : 'enabled'}
         tinymceScriptSrc="https://cdnjs.cloudflare.com/ajax/libs/tinymce/7.1.1/tinymce.min.js"
         onInit={(_evt, editor) => {
           editorRef.current = editor
+          // Thiết lập trạng thái ban đầu chuẩn xác để tránh race condition
+          editor.mode.set(disabled ? 'readonly' : 'design')
           if (value && editor.getContent() !== value) {
             editor.setContent(value)
           }
