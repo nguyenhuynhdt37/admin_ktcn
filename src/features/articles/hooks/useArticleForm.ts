@@ -177,9 +177,11 @@ export function useArticleForm({ articleId, showDraftsFeature = true }: UseArtic
   // Sync state with article detail in Edit Mode
   useEffect(() => {
     if (isEditMode && articleDetail) {
-      // Bảo mật phía Frontend: Chặn chỉnh sửa nếu user hiện tại không phải tác giả của bài viết
+      // Bảo mật phía Frontend: Chặn chỉnh sửa nếu user hiện tại không phải tác giả của bài viết và không phải admin
       const authorId = articleDetail.author_id || articleDetail.author?.id
-      if (user && authorId && authorId !== user.id) {
+      const isAdmin = !!user?.is_admin || user?.roles?.includes('super_admin') || user?.roles?.includes('admin')
+      const canEdit = authorId === user?.id || isAdmin
+      if (user && authorId && !canEdit) {
         toast.error('Bạn không có quyền chỉnh sửa bài viết của tác giả khác.')
         navigate('/articles')
         return

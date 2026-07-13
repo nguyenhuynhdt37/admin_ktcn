@@ -109,11 +109,14 @@ export const getArticleColumns = ({
       const article = row.original
       const title = article.translations?.vi?.title || '(Không tiêu đề)'
       const slug = article.translations?.vi?.slug || ''
+      const isAuthor = currentUser?.id === article.author_id || currentUser?.id === article.author?.id
+      const isAdmin = !!currentUser?.is_admin || currentUser?.roles?.includes('super_admin') || currentUser?.roles?.includes('admin')
+      const canEdit = isAuthor || isAdmin
       return (
         <div className="flex flex-col gap-1 min-w-[200px] max-w-[320px]">
           <div className="flex items-center gap-1.5 flex-wrap">
             <Link
-              to={`/articles/${article.id}/edit`}
+              to={canEdit ? `/articles/${article.id}/edit` : `/articles/${article.id}/preview`}
               className="font-medium text-sm text-foreground hover:text-primary transition-colors hover:underline truncate block"
             >
               {title}
@@ -365,6 +368,8 @@ export const getArticleColumns = ({
     cell: ({ row }) => {
       const article = row.original
       const isAuthor = currentUser?.id === article.author_id || currentUser?.id === article.author?.id
+      const isAdmin = !!currentUser?.is_admin || currentUser?.roles?.includes('super_admin') || currentUser?.roles?.includes('admin')
+      const canEdit = isAuthor || isAdmin
       return (
         <div className="text-right">
           <DropdownMenu>
@@ -395,7 +400,7 @@ export const getArticleColumns = ({
                     </Link>
                   </DropdownMenuItem>
 
-                  {isAuthor && (
+                  {canEdit && (
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onClick={() => onEdit(article.id)}
