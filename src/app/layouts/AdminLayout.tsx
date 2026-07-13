@@ -168,6 +168,8 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, onClose }: SidebarContentProps) {
+  const isAdmin = !!user?.is_admin || user?.roles?.includes('super_admin') || user?.roles?.includes('admin')
+
   // Flat list of navigation items with separator flags
   const navItems: (NavItem | NavSeparator)[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'menu.dashboard' },
@@ -200,6 +202,31 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Nhật ký hoạt động', href: '/audit-logs', icon: FileSpreadsheet, permission: 'menu.audit' },
   ]
 
+  // Filter items based on admin privileges
+  const filteredNavItems = navItems.filter((item) => {
+    if ('type' in item && item.type === 'separator') return true
+    const navItem = item as NavItem
+    if (navItem.label === 'Dashboard' || navItem.label === 'Thành viên' || navItem.label === 'Nhật ký hoạt động') {
+      return isAdmin
+    }
+    return true
+  })
+
+  // Clean up duplicate or trailing/leading separators
+  const finalNavItems: (NavItem | NavSeparator)[] = []
+  filteredNavItems.forEach((item) => {
+    if ('type' in item && item.type === 'separator') {
+      if (finalNavItems.length === 0) return // Skip leading separator
+      if ('type' in finalNavItems[finalNavItems.length - 1]) return // Skip consecutive separators
+      finalNavItems.push(item)
+    } else {
+      finalNavItems.push(item)
+    }
+  })
+  if (finalNavItems.length > 0 && 'type' in finalNavItems[finalNavItems.length - 1]) {
+    finalNavItems.pop() // Skip trailing separator
+  }
+
   return (
     <div className="flex h-full flex-col border-r bg-card text-card-foreground">
       <div className="flex h-16 items-center border-b px-4">
@@ -217,7 +244,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5">
-        {navItems.map((item, idx) => {
+        {finalNavItems.map((item, idx) => {
           if ('type' in item && item.type === 'separator') {
             return <div key={idx} className="my-2 border-t border-border/40 mx-2" />
           }

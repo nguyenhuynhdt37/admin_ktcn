@@ -75,10 +75,14 @@ export function LoginPage() {
       })
 
       const userResponse = await httpClient.get('/auth/me')
+      const user = userResponse.data
+      const isAdmin = !!user.is_admin || user.roles?.includes('super_admin') || user.roles?.includes('admin')
+      const defaultPath = isAdmin ? '/dashboard' : '/articles'
+      const targetPath = (location.state as { from?: { pathname: string } })?.from?.pathname || defaultPath
 
-      login(userResponse.data, '')
+      login(user, '')
       toast.success('Đăng nhập thành công!')
-      navigate(from, { replace: true })
+      navigate(targetPath, { replace: true })
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = (err as any).response

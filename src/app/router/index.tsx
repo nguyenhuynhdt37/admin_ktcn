@@ -14,6 +14,7 @@ import { MenusPage } from '@/features/menus/pages/MenusPage'
 import { LanguagesPage } from '@/features/languages/pages/LanguagesPage'
 import { AIHubPage } from '@/features/ai-hub/pages/AIHubPage'
 import { EmbeddingSettingsPage } from '@/features/ai-hub/pages/EmbeddingSettingsPage'
+import { useAuthStore } from '@/stores/authStore'
 
 
 
@@ -57,6 +58,21 @@ function NotFoundPage() {
   )
 }
 
+function IndexRedirect() {
+  const { user } = useAuthStore()
+  const isAdmin = !!user?.is_admin || user?.roles?.includes('super_admin') || user?.roles?.includes('admin')
+  return <Navigate to={isAdmin ? "/dashboard" : "/articles"} replace />
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore()
+  const isAdmin = !!user?.is_admin || user?.roles?.includes('super_admin') || user?.roles?.includes('admin')
+  if (!isAdmin) {
+    return <Navigate to="/articles" replace />
+  }
+  return <>{children}</>
+}
+
 export const router = createBrowserRouter([
   {
     element: <AuthLayout />,
@@ -81,11 +97,15 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />,
+        element: <IndexRedirect />,
       },
       {
         path: 'dashboard',
-        element: <DashboardPage />,
+        element: (
+          <AdminRoute>
+            <DashboardPage />
+          </AdminRoute>
+        ),
       },
       {
         path: 'categories',

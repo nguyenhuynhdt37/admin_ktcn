@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { Camera, User, Loader2 } from 'lucide-react'
 import { usersService } from '../../services/usersService'
+import { getMediaUrl } from '@/features/articles/utils/media'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { toast } from 'sonner'
 
@@ -32,7 +33,7 @@ export function AvatarSection({
       const res = await usersService.uploadAvatar(file)
       setAvatarId(res.id)
       const url = await usersService.getMediaUrl(res.id)
-      setAvatarUrl(url)
+      setAvatarUrl(getMediaUrl(url))
       toast.success('Tải ảnh đại diện lên thành công!')
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message || 'Không thể tải ảnh đại diện lên')

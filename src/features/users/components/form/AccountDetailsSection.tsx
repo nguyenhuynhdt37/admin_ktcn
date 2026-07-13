@@ -108,19 +108,21 @@ export function AccountDetailsSection({
           </div>
 
           {/* Password Fields */}
-          {!isEditMode && setPassword && setConfirmPassword && (
+          {setPassword && setConfirmPassword && (
             <>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Mật khẩu tài khoản *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">
+                  {isEditMode ? 'Cấp lại mật khẩu (để trống nếu không đổi)' : 'Mật khẩu tài khoản *'}
+                </Label>
                 <div className="relative">
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword?.(e.target.value)}
                     disabled={disabled}
-                    placeholder="Mật khẩu bảo mật..."
+                    placeholder={isEditMode ? "Mật khẩu mới cấp lại..." : "Mật khẩu bảo mật..."}
                     className="pr-9"
-                    required
+                    required={!isEditMode}
                   />
                   <button
                     type="button"
@@ -133,16 +135,18 @@ export function AccountDetailsSection({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Xác nhận mật khẩu *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">
+                  {isEditMode ? 'Xác nhận mật khẩu cấp lại' : 'Xác nhận mật khẩu *'}
+                </Label>
                 <div className="relative">
                   <Input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword?.(e.target.value)}
                     disabled={disabled}
-                    placeholder="Nhập lại mật khẩu..."
+                    placeholder={isEditMode ? "Nhập lại mật khẩu mới..." : "Nhập lại mật khẩu..."}
                     className="pr-9"
-                    required
+                    required={!isEditMode}
                   />
                   <button
                     type="button"
@@ -155,7 +159,6 @@ export function AccountDetailsSection({
               </div>
             </>
           )}
-
           {/* Full Name */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">Họ và Tên *</Label>

@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { DataTable } from '@/shared/components/DataTable'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import dayjs from 'dayjs'
+import {
+  MoreHorizontal,
+  Plus,
+  ArrowUpDown,
+  User,
+} from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Badge } from '@/shared/components/ui/badge'
+
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select'
-import { MoreHorizontal, ArrowUpDown, Plus, User } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,72 +21,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
-import dayjs from 'dayjs'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient } from '@/services/http/client'
-import { useAuth } from '@/app/providers/AuthProvider'
-import { usersService } from '@/features/users/services/usersService'
+import { Badge } from '@/shared/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select'
+import { DataTable } from '@/shared/components/DataTable'
+
 import { useAuthStore } from '@/stores/authStore'
-import { toast } from 'sonner'
-
-interface RoleData {
-  id: string
-  name: string
-  code: string
-}
-
-interface UserData {
-  id: string
-  username: string
-  email: string
-  phone: string | null
-  full_name: string
-  avatar_url: string | null
-  is_active: boolean
-  last_login: string | null
-  created_at: string
-  roles: RoleData[]
-}
+import { usersService } from '../services/usersService'
+import type { UserData, RoleData } from '../types/users.types'
 
 export function UsersPage() {
-  const queryClient = useQueryClient()
-  const { hasPermission } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user: currentUser } = useAuthStore()
-
-  const isAdmin = !!currentUser?.is_admin || !!currentUser?.roles?.includes('super_admin')
-  const canView = hasPermission('user.view')
-  const canCreate = isAdmin
-  const canUpdate = hasPermission('user.update')
-  const canDelete = isAdmin
-  const isCallerSuperAdmin = currentUser?.roles?.includes('super_admin')
-
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const pageParam = Number(searchParams.get('page'))
-  const page = (pageParam && pageParam > 0) ? pageParam - 1 : 0
-  const roleFilter = searchParams.get('role_code') || 'all'
-  const statusFilter = searchParams.get('is_active') === 'true' ? 'active' : searchParams.get('is_active') === 'false' ? 'inactive' : 'all'
-  const urlSearch = searchParams.get('search') || ''
+  const isAdmin = !!currentUser?.is_admin || !!currentUser?.roles?.includes('super_admin')
+  const isCallerSuperAdmin = currentUser?.roles?.includes('super_admin') || false
 
-  const [search, setSearch] = useState(urlSearch)
-  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch)
+  // Permissions check
+  const canView = isAdmin
+  const canCreate = isAdmin
+  const canUpdate = isAdmin
+  const canDelete = isAdmin
+
+  // Query Params from URL
+  const page = Math.max(0, parseInt(searchParams.get('page') || '1') - 1)
   const pageSize = 10
+  const roleFilter = searchParams.get('role_code') || 'all'
+  const isDeletedFilter = searchParams.get('is_deleted') === 'true'
+  const statusFilter = isDeletedFilter ? 'deleted' : (searchParams.get('is_active') === 'true' ? 'active' : (searchParams.get('is_active') === 'false' ? 'inactive' : 'all'))
 
-  // Chuẩn hóa trang nếu URL chứa page=0 hoặc nhỏ hơn 1
-  useEffect(() => {
-    const pParam = searchParams.get('page')
-    if (pParam !== null) {
-      const pageNum = Number(pParam)
-      if (isNaN(pageNum) || pageNum < 1) {
-        const params = new URLSearchParams(searchParams)
-        params.set('page', '1')
-        setSearchParams(params)
-      }
-    }
-  }, [searchParams, setSearchParams])
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [debouncedSearch, setDebouncedSearch] = useState(search)
 
-  // Debounce search query
+  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search)
@@ -94,7 +68,7 @@ export function UsersPage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  // Đồng bộ search lên URL
+  // Sync search input with URL search params
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
     if (debouncedSearch.trim()) {
@@ -121,10 +95,16 @@ export function UsersPage() {
     const params = new URLSearchParams(searchParams)
     if (val === 'active') {
       params.set('is_active', 'true')
+      params.delete('is_deleted')
     } else if (val === 'inactive') {
       params.set('is_active', 'false')
+      params.delete('is_deleted')
+    } else if (val === 'deleted') {
+      params.set('is_deleted', 'true')
+      params.delete('is_active')
     } else {
       params.delete('is_active')
+      params.delete('is_deleted')
     }
     params.set('page', '1')
     setSearchParams(params)
@@ -137,7 +117,7 @@ export function UsersPage() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', debouncedSearch, roleFilter, statusFilter, page],
+    queryKey: ['users', debouncedSearch, roleFilter, statusFilter, page, isDeletedFilter],
     queryFn: async () => {
       const params: Record<string, string> = {
         page: String(page + 1), // API expects 1-indexed page
@@ -145,7 +125,9 @@ export function UsersPage() {
       }
       if (debouncedSearch) params.search = debouncedSearch
       if (roleFilter !== 'all') params.role_code = roleFilter
-      if (statusFilter !== 'all') {
+      if (isDeletedFilter) {
+        params.is_deleted = 'true'
+      } else if (statusFilter !== 'all') {
         params.is_active = statusFilter === 'active' ? 'true' : 'false'
       }
 
@@ -158,7 +140,7 @@ export function UsersPage() {
   const deleteMutation = useMutation({
     mutationFn: usersService.delete,
     onSuccess: () => {
-      toast.success('Tài khoản đã được xóa mềm. Liên hệ quản trị viên nếu cần khôi phục.')
+      toast.success('Tài khoản đã được xóa mềm. Bạn có thể chuyển sang bộ lọc "Đã xóa" để khôi phục.')
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
     onError: (err: any) => {
@@ -171,6 +153,19 @@ export function UsersPage() {
       } else {
         toast.error(errorData?.message || 'Không thể xóa thành viên')
       }
+    },
+  })
+
+  // Restore User Mutation
+  const restoreMutation = useMutation({
+    mutationFn: usersService.restore,
+    onSuccess: () => {
+      toast.success('Khôi phục tài khoản thành công!')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err: any) => {
+      const errorData = err?.response?.data?.error
+      toast.error(errorData?.message || 'Không thể khôi phục tài khoản')
     },
   })
 
@@ -248,6 +243,13 @@ export function UsersPage() {
       header: 'Trạng thái',
       cell: ({ row }) => {
         const isActive = row.getValue('is_active') as boolean
+        if (isDeletedFilter) {
+          return (
+            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 font-medium">
+              Đã xóa
+            </Badge>
+          )
+        }
         return (
           <Badge variant={isActive ? 'default' : 'destructive'}>
             {isActive ? 'Hoạt động' : 'Tạm khóa'}
@@ -283,32 +285,50 @@ export function UsersPage() {
               <DropdownMenuItem className="cursor-pointer" onClick={() => navigator.clipboard.writeText(user.id)}>
                 Sao chép ID
               </DropdownMenuItem>
-              {(isAdmin || user.id === currentUser?.id) && (
-                <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/users/${user.id}/activity`)}>
-                  Xem hoạt động
-                </DropdownMenuItem>
-              )}
-              {canUpdate && canModify && (isAdmin || user.id === currentUser?.id) && (
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/users/${user.id}/edit`)}
-                >
-                  Chỉnh sửa
-                </DropdownMenuItem>
-              )}
-              {canDelete && canModify && user.id !== currentUser?.id && isAdmin && (
+              {isDeletedFilter ? (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="cursor-pointer text-destructive focus:bg-destructive/10"
+                    className="cursor-pointer text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 dark:focus:bg-emerald-950/20"
                     onClick={() => {
-                      if (confirm(`Bạn có chắc chắn muốn xóa thành viên "${user.full_name}"? Hành động này không thể hoàn tác.`)) {
-                        deleteMutation.mutate(user.id)
+                      if (confirm(`Bạn có chắc chắn muốn khôi phục thành viên "${user.full_name}"?`)) {
+                        restoreMutation.mutate(user.id)
                       }
                     }}
                   >
-                    Xóa thành viên
+                    Khôi phục tài khoản
                   </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  {(isAdmin || user.id === currentUser?.id) && (
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/users/${user.id}/activity`)}>
+                      Xem hoạt động
+                    </DropdownMenuItem>
+                  )}
+                  {canUpdate && canModify && (isAdmin || user.id === currentUser?.id) && (
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/users/${user.id}/edit`)}
+                    >
+                      Chỉnh sửa
+                    </DropdownMenuItem>
+                  )}
+                  {canDelete && canModify && user.id !== currentUser?.id && isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="cursor-pointer text-destructive focus:bg-destructive/10"
+                        onClick={() => {
+                          if (confirm(`Bạn có chắc chắn muốn xóa thành viên "${user.full_name}"?`)) {
+                            deleteMutation.mutate(user.id)
+                          }
+                        }}
+                      >
+                        Xóa thành viên
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </>
               )}
             </DropdownMenuContent>
@@ -370,6 +390,7 @@ export function UsersPage() {
               <SelectItem value="all">Tất cả trạng thái</SelectItem>
               <SelectItem value="active">Hoạt động</SelectItem>
               <SelectItem value="inactive">Tạm khóa</SelectItem>
+              <SelectItem value="deleted">Đã xóa</SelectItem>
             </SelectContent>
           </Select>
         </div>

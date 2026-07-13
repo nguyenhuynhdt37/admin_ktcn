@@ -27,6 +27,11 @@ export const usersService = {
     return data
   },
 
+  restore: async (id: string): Promise<UserDetail> => {
+    const { data } = await httpClient.post<UserDetail>(`/users/${id}/restore`)
+    return data
+  },
+
   uploadAvatar: async (file: File): Promise<{ id: string; name: string }> => {
     const formData = new FormData()
     formData.append('file', file)

@@ -10,6 +10,7 @@ import { AvatarSection } from './form/AvatarSection'
 import { AccountDetailsSection } from './form/AccountDetailsSection'
 import { BioSection } from './form/BioSection'
 import { StatusSection } from './form/StatusSection'
+import { getMediaUrl } from '@/features/articles/utils/media'
 
 interface UserFormProps {
   userId?: string | null
@@ -63,14 +64,7 @@ export function UserForm({ userId }: UserFormProps) {
       setBio(userDetail.bio || '')
       setAvatarId(userDetail.avatar_id)
       setIsActive(userDetail.is_active)
-
-      if (userDetail.avatar_id) {
-        usersService.getMediaUrl(userDetail.avatar_id)
-          .then((url) => setAvatarUrl(url))
-          .catch(() => setAvatarUrl(null))
-      } else {
-        setAvatarUrl(null)
-      }
+      setAvatarUrl(userDetail.avatar_url ? getMediaUrl(userDetail.avatar_url) : null)
     }
   }, [isEditMode, userDetail])
 
@@ -150,6 +144,9 @@ export function UserForm({ userId }: UserFormProps) {
       }
 
       if (isEditMode) {
+        if (password) {
+          payload.password = password
+        }
         return usersService.update(userId!, payload)
       } else {
         payload.username = username
@@ -225,6 +222,20 @@ export function UserForm({ userId }: UserFormProps) {
       // 5. Password confirmation validation
       if (password !== confirmPassword) {
         toast.error('Mật khẩu xác nhận không trùng khớp')
+        return
+      }
+    }
+
+    if (isEditMode && password) {
+      // 4b. Password validation for edit mode reset
+      if (password.length < 6) {
+        toast.error('Mật khẩu cấp lại phải chứa ít nhất 6 ký tự')
+        return
+      }
+
+      // 5b. Password confirmation validation for edit mode reset
+      if (password !== confirmPassword) {
+        toast.error('Mật khẩu xác nhận cấp lại không trùng khớp')
         return
       }
     }

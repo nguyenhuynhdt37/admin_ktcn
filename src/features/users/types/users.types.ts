@@ -24,6 +24,7 @@ export interface UserDetail {
   department: string | null;
   avatar_id: string | null;
   avatar: UserAvatar | null;
+  avatar_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
