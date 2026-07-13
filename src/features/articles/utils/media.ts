@@ -9,6 +9,17 @@ export function getMediaUrl(key: string | null | undefined): string {
     return key
   }
   const cleanKey = key.replace(/^\//, '')
-  // Trỏ trực tiếp đến máy chủ lưu trữ MinIO
-  return `http://localhost:9000/university-media/${cleanKey}`
+  
+  let origin = ''
+  try {
+    origin = new URL(env.VITE_API_URL).origin
+  } catch {
+    origin = 'http://localhost:8000'
+  }
+
+  if (cleanKey.startsWith('api/v1/portal/media/file/')) {
+    return `${origin}/${cleanKey}`
+  }
+
+  return `${origin}/api/v1/portal/media/file/${cleanKey}`
 }
