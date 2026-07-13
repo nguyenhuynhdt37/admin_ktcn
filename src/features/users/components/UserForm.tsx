@@ -17,10 +17,12 @@ interface UserFormProps {
 export function UserForm({ userId }: UserFormProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user: currentUser } = useAuthStore()
 
   const isEditMode = !!userId
-  
-  const canSave = true
+  const isAdmin = !!currentUser?.is_admin || !!currentUser?.roles?.includes('super_admin')
+  const isAuthorized = isAdmin || (isEditMode && userId === currentUser?.id)
+  const canSave = isAuthorized
 
   // Form States
   const [username, setUsername] = useState('')
@@ -246,6 +248,15 @@ export function UserForm({ userId }: UserFormProps) {
     )
   }
 
+  if (!isAuthorized) {
+    return (
+      <div className="flex h-[50vh] flex-col items-center justify-center space-y-2">
+        <h3 className="text-xl font-semibold text-destructive">Truy cập bị từ chối</h3>
+        <p className="text-muted-foreground">Bạn không có quyền quản trị hoặc chỉnh sửa tài khoản này.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -322,7 +333,7 @@ export function UserForm({ userId }: UserFormProps) {
             <StatusSection
               isActive={isActive}
               setIsActive={setIsActive}
-              disabled={!canSave}
+              disabled={!canSave || !isAdmin}
             />
           </div>
         </div>

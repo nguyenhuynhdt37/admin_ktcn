@@ -8,6 +8,7 @@ export interface User {
   avatar_url: string | null
   roles: string[]
   is_active: boolean
+  is_admin?: boolean
 }
 
 interface AuthState {

@@ -43,10 +43,12 @@ export function UserActivityPage() {
   const { user: currentUser } = useAuthStore()
   const queryClient = useQueryClient()
 
-  const canView      = hasPermission('user.view')
-  const canUpdate    = hasPermission('user.update')
-  const canLock      = hasPermission('user.lock')
-  const canUnlock    = hasPermission('user.unlock')
+  const isAdmin = !!currentUser?.is_admin || !!currentUser?.roles?.includes('super_admin')
+  const isAuthorized = isAdmin || userId === currentUser?.id
+  const canView      = hasPermission('user.view') && isAuthorized
+  const canUpdate    = hasPermission('user.update') && isAuthorized
+  const canLock      = isAdmin
+  const canUnlock    = isAdmin
   const isSuperAdmin = currentUser?.roles?.includes('super_admin')
 
   // Fetch user status to know if account is locked or not

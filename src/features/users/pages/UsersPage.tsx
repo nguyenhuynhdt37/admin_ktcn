@@ -54,10 +54,11 @@ export function UsersPage() {
   const navigate = useNavigate()
   const { user: currentUser } = useAuthStore()
 
+  const isAdmin = !!currentUser?.is_admin || !!currentUser?.roles?.includes('super_admin')
   const canView = hasPermission('user.view')
-  const canCreate = hasPermission('user.create')
+  const canCreate = isAdmin
   const canUpdate = hasPermission('user.update')
-  const canDelete = hasPermission('user.delete')
+  const canDelete = isAdmin
   const isCallerSuperAdmin = currentUser?.roles?.includes('super_admin')
 
   const [searchParams, setSearchParams] = useSearchParams()
@@ -282,10 +283,12 @@ export function UsersPage() {
               <DropdownMenuItem className="cursor-pointer" onClick={() => navigator.clipboard.writeText(user.id)}>
                 Sao chép ID
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/users/${user.id}/activity`)}>
-                Xem hoạt động
-              </DropdownMenuItem>
-              {canUpdate && canModify && (
+              {(isAdmin || user.id === currentUser?.id) && (
+                <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/users/${user.id}/activity`)}>
+                  Xem hoạt động
+                </DropdownMenuItem>
+              )}
+              {canUpdate && canModify && (isAdmin || user.id === currentUser?.id) && (
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => navigate(`/users/${user.id}/edit`)}
@@ -293,7 +296,7 @@ export function UsersPage() {
                   Chỉnh sửa
                 </DropdownMenuItem>
               )}
-              {canDelete && canModify && user.id !== currentUser?.id && (
+              {canDelete && canModify && user.id !== currentUser?.id && isAdmin && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
