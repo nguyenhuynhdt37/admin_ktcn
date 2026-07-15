@@ -41,6 +41,7 @@ import {
   Fingerprint,
   Tag,
   MessageSquareText,
+  BookOpen,
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -182,6 +183,7 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Album ảnh', href: '/galleries', icon: Images, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
     { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
+    { label: 'Chương trình đào tạo', href: '/programs', icon: BookOpen, permission: null },
 
     { label: 'AI Management Hub', href: '/languages/ai-hub', icon: BrainCircuit, permission: null },
     { label: 'Cấu hình Embedding', href: '/languages/embedding', icon: Fingerprint, permission: null },
@@ -330,7 +332,7 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-4">
             <Drawer open={mobileOpen} onOpenChange={setMobileOpen} direction="left">
@@ -421,7 +423,7 @@ export function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background/50">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6 bg-background/50">
           <Outlet />
         </main>
       </div>

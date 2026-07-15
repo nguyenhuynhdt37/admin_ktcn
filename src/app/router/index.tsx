@@ -31,6 +31,8 @@ import { TeachersPage } from '@/features/teachers/pages/TeachersPage'
 import TeacherCreatePage from '@/features/teachers/pages/TeacherCreatePage'
 import TeacherEditPage from '@/features/teachers/pages/TeacherEditPage'
 import TeacherDetailPage from '@/features/teachers/pages/TeacherDetailPage'
+import { ProgramsPage } from '@/features/programs/pages/ProgramsPage'
+import { ProgramEditPage } from '@/features/programs/pages/ProgramEditPage'
 
 import { TagsPage } from '@/features/tags/pages/TagsPage'
 import { ArticlesPage } from '@/features/articles/pages/ArticlesPage'
@@ -162,6 +164,14 @@ export const router = createBrowserRouter([
       {
         path: 'teachers/:slug',
         element: <TeacherDetailPage />,
+      },
+      {
+        path: 'programs',
+        element: <ProgramsPage />,
+      },
+      {
+        path: 'programs/:id/edit',
+        element: <ProgramEditPage />,
       },
       {
         path: 'articles',
