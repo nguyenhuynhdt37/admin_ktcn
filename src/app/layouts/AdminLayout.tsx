@@ -73,6 +73,11 @@ interface NavSeparator {
   type: 'separator'
 }
 
+interface NavGroupHeader {
+  type: 'group'
+  label: string
+}
+
 interface SidebarNavItemProps {
   item: NavItem
   onClose?: () => void
@@ -171,10 +176,11 @@ interface SidebarContentProps {
 function SidebarContent({ user, onClose }: SidebarContentProps) {
   const isAdmin = !!user?.is_admin || user?.roles?.includes('super_admin') || user?.roles?.includes('admin')
 
-  // Flat list of navigation items with separator flags
-  const navItems: (NavItem | NavSeparator)[] = [
+  // Flat list of navigation items with separator flags and group headers
+  const navItems: (NavItem | NavSeparator | NavGroupHeader)[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'menu.dashboard' },
-    { type: 'separator' },
+    
+    { type: 'group', label: 'Quản lý nội dung' },
     { label: 'Bài viết', href: '/articles', icon: FileText, permission: 'menu.article' },
     { label: 'Tư vấn tuyển sinh', href: '/consultations', icon: MessageSquareText, permission: null },
     { label: 'Danh mục', href: '/categories', icon: FolderOpen, permission: 'menu.category' },
@@ -182,31 +188,27 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     { label: 'Banner quảng cáo', href: '/banners', icon: Image, permission: null },
     { label: 'Album ảnh', href: '/galleries', icon: Images, permission: null },
     { label: 'Menu điều hướng', href: '/menus', icon: Menu, permission: 'menu.menu' },
-    { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
+    
+    { type: 'group', label: 'Quản lý đào tạo' },
     { label: 'Chương trình đào tạo', href: '/programs', icon: BookOpen, permission: null },
-
+    { label: 'Bộ môn', href: '/departments', icon: Building, permission: null },
+    { label: 'Chức vụ', href: '/positions', icon: Briefcase, permission: null },
+    { label: 'Giảng viên', href: '/teachers', icon: GraduationCap, permission: null },
+    
+    { type: 'group', label: 'Hệ thống & AI' },
     { label: 'AI Management Hub', href: '/languages/ai-hub', icon: BrainCircuit, permission: null },
     { label: 'Cấu hình Embedding', href: '/languages/embedding', icon: Fingerprint, permission: null },
-    { type: 'separator' },
+    { label: 'Ngôn ngữ', href: '/languages', icon: Languages, permission: null },
     { label: 'Thành viên', href: '/users', icon: Users, permission: null },
-    {
-      label: 'Đơn vị',
-      icon: Building,
-      permission: null,
-      children: [
-        { label: 'Bộ môn', href: '/departments', icon: Award },
-        { label: 'Chức vụ', href: '/positions', icon: Briefcase },
-        { label: 'Giảng viên', href: '/teachers', icon: GraduationCap },
-      ]
-    },
     { label: 'Tính năng hệ thống', href: '/features', icon: Layers, permission: null },
-    { type: 'separator' },
     { label: 'Nhật ký hoạt động', href: '/audit-logs', icon: FileSpreadsheet, permission: 'menu.audit' },
   ]
 
   // Filter items based on admin privileges
   const filteredNavItems = navItems.filter((item) => {
-    if ('type' in item && item.type === 'separator') return true
+    if ('type' in item) {
+      if (item.type === 'separator' || item.type === 'group') return true
+    }
     const navItem = item as NavItem
     if (navItem.label === 'Dashboard' || navItem.label === 'Thành viên' || navItem.label === 'Nhật ký hoạt động') {
       return isAdmin
@@ -214,18 +216,18 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
     return true
   })
 
-  // Clean up duplicate or trailing/leading separators
-  const finalNavItems: (NavItem | NavSeparator)[] = []
+  // Clean up duplicate or trailing/leading separators/groups
+  const finalNavItems: (NavItem | NavSeparator | NavGroupHeader)[] = []
   filteredNavItems.forEach((item) => {
     if ('type' in item && item.type === 'separator') {
       if (finalNavItems.length === 0) return // Skip leading separator
-      if ('type' in finalNavItems[finalNavItems.length - 1]) return // Skip consecutive separators
+      if ('type' in finalNavItems[finalNavItems.length - 1] && finalNavItems[finalNavItems.length - 1].type === 'separator') return // Skip consecutive separators
       finalNavItems.push(item)
     } else {
       finalNavItems.push(item)
     }
   })
-  if (finalNavItems.length > 0 && 'type' in finalNavItems[finalNavItems.length - 1]) {
+  if (finalNavItems.length > 0 && 'type' in finalNavItems[finalNavItems.length - 1] && finalNavItems[finalNavItems.length - 1].type === 'separator') {
     finalNavItems.pop() // Skip trailing separator
   }
 
@@ -247,8 +249,20 @@ function SidebarContent({ user, onClose }: SidebarContentProps) {
 
       <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5">
         {finalNavItems.map((item, idx) => {
-          if ('type' in item && item.type === 'separator') {
-            return <div key={idx} className="my-2 border-t border-border/40 mx-2" />
+          if ('type' in item) {
+            if (item.type === 'separator') {
+              return <div key={idx} className="my-2 border-t border-border/40 mx-2" />
+            }
+            if (item.type === 'group') {
+              return (
+                <div
+                  key={idx}
+                  className="pt-4 pb-1.5 px-3 text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase font-mono"
+                >
+                  {item.label}
+                </div>
+              )
+            }
           }
           const navItem = item as NavItem
           return <SidebarNavItem key={navItem.label} item={navItem} onClose={onClose} />
